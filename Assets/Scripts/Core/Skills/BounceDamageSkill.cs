@@ -1,0 +1,49 @@
+using UnityEngine;
+
+/// <summary>
+/// Bounce damage skill that allows projectiles to bounce between enemies
+/// </summary>
+[CreateAssetMenu(fileName = "BounceDamageSkill", menuName = "Skills/Bounce Damage")]
+public class BounceDamageSkill : SkillData
+{
+    [Header("Bounce Settings")]
+    [SerializeField] private int _bounceCount = 1; // Default number of bounces
+    [SerializeField] private int _rageBounceCount = 3; // Number of bounces in rage mode
+    [SerializeField] private float _damageFalloff = 0.2f; // Damage reduction per bounce (percentage)
+    
+    private int currentBounceCount;
+    
+    /// <summary>
+    /// Returns the current number of bounces based on skill state
+    /// </summary>
+    public int GetBounceCount()
+    {
+        return currentBounceCount;
+    }
+    
+    /// <summary>
+    /// Returns the damage falloff per bounce
+    /// </summary>
+    public float GetDamageFalloff()
+    {
+        return _damageFalloff;
+    }
+    
+    /// <summary>
+    /// Applies the rage mode effect to the skill
+    /// </summary>
+    public override void ApplyRageEffect(bool rageActive)
+    {
+        base.ApplyRageEffect(rageActive);
+        currentBounceCount = rageActive ? _rageBounceCount : _bounceCount;
+    }
+    
+    /// <summary>
+    /// Gets the base value of the skill effect (bounce count)
+    /// </summary>
+    /// <returns>The current bounce count as float</returns>
+    public override float GetValue()
+    {
+        return GetBounceCount();
+    }
+} 
