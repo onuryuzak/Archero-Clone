@@ -71,29 +71,24 @@ public class MultiShotProjectileStrategy : IProjectileStrategy
     /// </summary>
     public void FireProjectile(WeaponController weaponController, Vector3 position, Vector3 direction, float speed, float damage)
     {
-        Debug.Log($"[MultiShotProjectileStrategy] FireProjectile called with _projectileCount: {_projectileCount}");
+        // Mermi sayısının en az 2 olduğundan emin ol
+        int projectileCount = Mathf.Max(2, _projectileCount);
         
-        // If only one projectile, use standard firing
-        if (_projectileCount <= 1)
-        {
-            Debug.Log("[MultiShotProjectileStrategy] Only 1 projectile requested, using standard firing");
-            weaponController.CreateProjectile(position, direction, speed, damage);
-            return;
-        }
+        Debug.Log($"[MultiShotProjectileStrategy] FireProjectile called with projectileCount: {projectileCount}");
         
         // Calculate starting rotation offset to center the spread
-        float startAngle = -_spreadAngle * (_projectileCount - 1) / 2f;
+        float startAngle = -_spreadAngle * (projectileCount - 1) / 2f;
         Debug.Log($"[MultiShotProjectileStrategy] Start angle: {startAngle}, Spread angle: {_spreadAngle}");
         
         // Create projectiles in spread pattern
-        for (int i = 0; i < _projectileCount; i++)
+        for (int i = 0; i < projectileCount; i++)
         {
             // Calculate angle for this projectile
             float angle = startAngle + _spreadAngle * i;
             
             // Rotate direction vector by angle
             Vector3 rotatedDirection = Quaternion.Euler(0, angle, 0) * direction;
-            Debug.Log($"[MultiShotProjectileStrategy] Creating projectile {i+1}/{_projectileCount}, angle: {angle}, direction: {rotatedDirection}");
+            Debug.Log($"[MultiShotProjectileStrategy] Creating projectile {i+1}/{projectileCount}, angle: {angle}, direction: {rotatedDirection}");
             
             // Create projectile
             GameObject projectile = weaponController.CreateProjectile(position, rotatedDirection, speed, damage);
@@ -107,6 +102,6 @@ public class MultiShotProjectileStrategy : IProjectileStrategy
             }
         }
         
-        Debug.Log($"[MultiShotProjectileStrategy] Finished firing {_projectileCount} projectiles");
+        Debug.Log($"[MultiShotProjectileStrategy] Finished firing {projectileCount} projectiles");
     }
 } 

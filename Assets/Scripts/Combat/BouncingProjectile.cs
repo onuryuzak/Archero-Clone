@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,168 +8,211 @@ using UnityEngine;
 [RequireComponent(typeof(Projectile))]
 public class BouncingProjectile : MonoBehaviour
 {
+    // References
+    private Projectile _projectile;
+    
+    [Header("Bounce Settings")]
+    [SerializeField] private float _bounceRange = 10f;
+    [SerializeField] private LayerMask _targetLayers;
+    
+    // Bounce parameters
     private int _remainingBounces = 0;
     private float _damageFalloffPercentage = 0.25f;
     private float _originalDamage = 0f;
-    private Projectile _projectile;
+    private float _currentDamage;
     
-    // Store hit targets to avoid bouncing to the same target
+    // Target tracking
     private List<GameObject> _hitTargets = new List<GameObject>();
     
-    // Bounce range - how far to look for targets to bounce to
-    [SerializeField] private float _bounceRange = 10f;
-    [SerializeField] private LayerMask _targetLayers; // Layers of potential bounce targets
+    // Debug
+    [SerializeField] private bool _showDebugLogs = true;
     
     private void Awake()
     {
         _projectile = GetComponent<Projectile>();
         
-        // Subscribe to the projectile's OnHit event
         if (_projectile != null)
         {
-            _projectile.OnHit += HandleHit;
+            // Subscribe to the projectile's OnHit event
+            _projectile.OnHit += OnProjectileHit;
+        }
+        
+        // Set default target layers if not set
+        if (_targetLayers == 0)
+        {
+            _targetLayers = LayerMask.GetMask("Enemy");
         }
     }
     
     private void OnDestroy()
     {
-        // Unsubscribe from the event when destroyed
         if (_projectile != null)
         {
-            _projectile.OnHit -= HandleHit;
+            _projectile.OnHit -= OnProjectileHit;
         }
     }
     
     /// <summary>
-    /// Initializes the bouncing projectile with bounce parameters
+    /// Initialize the bouncing projectile with the given parameters
     /// </summary>
-    /// <param name="bounceCount">Number of bounces</param>
-    /// <param name="falloffPercentage">Damage reduction per bounce (0-1)</param>
-    /// <param name="baseDamage">Original projectile damage</param>
     public void Initialize(int bounceCount, float falloffPercentage, float baseDamage)
     {
+        // Use the exact bounce count without any modifications
         _remainingBounces = bounceCount;
         _damageFalloffPercentage = Mathf.Clamp01(falloffPercentage);
         _originalDamage = baseDamage;
+        _currentDamage = baseDamage;
         
-        // Set target layers if not already set
-        if (_targetLayers == 0)
+        // Log the exact value to verify
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] EXACT bounce count set: {_remainingBounces} (no additions)");
+    }
+
+    
+    /// <summary>
+    /// Called when the projectile hits something
+    /// </summary>
+    private void OnProjectileHit(GameObject hitObject, Vector3 hitPosition)
+    {
+        if (hitObject == null) return;
+        
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Hit object: {hitObject.name}, Current bounce count: {_remainingBounces}");
+        
+        // If we're not already tracking this target, handle the hit
+        if (!_hitTargets.Contains(hitObject))
         {
-            // Default to Enemy layer
-            _targetLayers = LayerMask.GetMask("Enemy");
+            HitTarget(hitObject, hitPosition);
         }
     }
     
     /// <summary>
-    /// Handles the hit event from the projectile
+    /// Process a hit on a target
     /// </summary>
-    /// <param name="hitObject">The object that was hit</param>
-    /// <param name="hitPosition">Position where the hit occurred</param>
-    private void HandleHit(GameObject hitObject, Vector3 hitPosition)
+    private void HitTarget(GameObject hitObject, Vector3 hitPosition)
     {
-        // Add hit object to the list
-        if (hitObject != null && !_hitTargets.Contains(hitObject))
+        // Add to hit targets
+        if (!_hitTargets.Contains(hitObject))
         {
             _hitTargets.Add(hitObject);
         }
         
-        // Try to bounce if we have remaining bounces
+        // Apply damage to the target if it's damageable
+        IDamageable damageable = hitObject.GetComponent<IDamageable>();
+        if (damageable != null)
+        {
+            damageable.TakeDamage(_currentDamage);
+            Debug.Log($"[BouncingProjectile] Applied damage: {_currentDamage} to {hitObject.name}");
+        }
+        
+        // Calculate reduced damage for next hit
+        _currentDamage = _originalDamage * (1f - (_damageFalloffPercentage * _hitTargets.Count));
+        
+        // Check if we should continue bouncing
         if (_remainingBounces > 0)
         {
-            BounceToNextTarget(hitPosition);
+            _remainingBounces--;
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Bounces remaining after decrement: {_remainingBounces} (Total hits so far: {_hitTargets.Count})");
+            
+            // Pause the projectile momentarily to prepare for bounce
+            _projectile.PauseMovement();
+            
+            // Find next target
+            StartCoroutine(FindAndBounceToNextTarget(hitPosition));
         }
-        
-        // Destroy this projectile after processing the hit
-        Destroy(gameObject);
+        else
+        {
+            // No more bounces, destroy the projectile
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No more bounces, destroying");
+            Destroy(gameObject);
+        }
     }
     
     /// <summary>
-    /// Finds the next target and bounces to it
+    /// Find and bounce to the next target
     /// </summary>
-    /// <param name="hitPosition">Position to bounce from</param>
-    private void BounceToNextTarget(Vector3 hitPosition)
+    private IEnumerator FindAndBounceToNextTarget(Vector3 currentPosition)
     {
-        // Find all potential targets in range
-        Collider[] potentialTargets = Physics.OverlapSphere(hitPosition, _bounceRange, _targetLayers);
-        GameObject bestTarget = null;
-        float closestDistance = float.MaxValue;
+        // Small delay to ensure hit processing is complete
+        yield return new WaitForSeconds(0.05f);
         
-        // Find the closest target that hasn't been hit yet
+        // Find all potential targets in range
+        Collider[] potentialTargets = Physics.OverlapSphere(currentPosition, _bounceRange, _targetLayers);
+        
+        // Filter out targets we've already hit
+        List<GameObject> validTargets = new List<GameObject>();
         foreach (Collider col in potentialTargets)
         {
-            // Skip targets we've already hit
-            if (_hitTargets.Contains(col.gameObject))
-                continue;
-                
-            float distance = Vector3.Distance(hitPosition, col.transform.position);
-            if (distance < closestDistance)
+            if (col.gameObject != null && !_hitTargets.Contains(col.gameObject))
             {
-                closestDistance = distance;
-                bestTarget = col.gameObject;
+                validTargets.Add(col.gameObject);
             }
         }
         
-        // If we found a valid target, create a new projectile to bounce to it
-        if (bestTarget != null)
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Found {validTargets.Count} valid targets");
+        
+        // If we have valid targets, select the closest one
+        if (validTargets.Count > 0)
         {
-            // Calculate new damage with falloff
-            float newDamage = _originalDamage * (1f - (_damageFalloffPercentage * (_hitTargets.Count)));
+            // Sort by distance
+            validTargets.Sort((a, b) => 
+                Vector3.Distance(currentPosition, a.transform.position)
+                .CompareTo(Vector3.Distance(currentPosition, b.transform.position)));
             
-            // Get direction to the new target
-            Vector3 direction = (bestTarget.transform.position - hitPosition).normalized;
+            // Select closest target
+            GameObject nextTarget = validTargets[0];
             
-            // Create a new projectile
-            GameObject newProjectile = Instantiate(gameObject, hitPosition, Quaternion.LookRotation(direction));
+            // Calculate direction to target
+            Vector3 direction = (nextTarget.transform.position - currentPosition).normalized;
             
-            // Get and configure the new bouncing component
-            BouncingProjectile bouncer = newProjectile.GetComponent<BouncingProjectile>();
-            if (bouncer != null)
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Bouncing to target: {nextTarget.name}");
+            
+            // Temporarily ignore collisions
+            StartCoroutine(TemporarilyIgnoreCollisions(0.2f));
+            
+            // Offset the position slightly to avoid getting stuck
+            Vector3 offsetPosition = currentPosition + (direction * 0.1f);
+            
+            // Move the projectile to the offset position
+            transform.position = offsetPosition;
+            
+            // Disable gravity for bounced projectiles
+            if (_projectile != null)
             {
-                // Copy the hit targets to avoid hitting the same targets
-                bouncer._hitTargets = new List<GameObject>(_hitTargets);
+                _projectile.SetGravity(false);
                 
-                // Reduce remaining bounces and initialize
-                bouncer.Initialize(_remainingBounces - 1, _damageFalloffPercentage, _originalDamage);
+                // Resume projectile movement with the new direction and original speed
+                _projectile.Initialize(direction, _projectile.Speed, _currentDamage);
+                _projectile.ResumeMovement();
             }
-            
-            // Configure the new projectile
-            Projectile proj = newProjectile.GetComponent<Projectile>();
-            if (proj != null)
-            {
-                proj.Initialize(direction, _projectile.Speed, newDamage);
-                
-                // Prevent the OnHit event from firing immediately - set to Ignore Raycast layer if exists
-                int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
-                if (ignoreRaycastLayer >= 0 && ignoreRaycastLayer <= 31) {
-                    proj.gameObject.layer = ignoreRaycastLayer;
-                } else {
-                    Debug.LogWarning("'Ignore Raycast' layer not found. This is a built-in Unity layer and should exist.");
-                }
-                
-                // Reset the layer after a short delay to prevent hitting the same target
-                proj.StartCoroutine(DelayedLayerReset(proj.gameObject));
-            }
+        }
+        else
+        {
+            // No valid targets, destroy the projectile
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No valid targets, destroying");
+            Destroy(gameObject, 0.05f);
         }
     }
     
     /// <summary>
-    /// Coroutine to reset the layer after a short delay
+    /// Temporarily ignore collisions by changing the layer
     /// </summary>
-    private System.Collections.IEnumerator DelayedLayerReset(GameObject obj)
+    private IEnumerator TemporarilyIgnoreCollisions(float duration)
     {
-        // Wait a small amount of time to ensure we don't immediately hit
-        yield return new WaitForSeconds(0.1f);
+        // Cache original layer
+        int originalLayer = gameObject.layer;
         
-        // Reset to the default projectile layer
-        if (obj != null)
+        // Change to ignore raycast layer
+        int ignoreLayer = LayerMask.NameToLayer("Ignore Raycast");
+        if (ignoreLayer >= 0)
         {
-            int projectileLayer = LayerMask.NameToLayer("Projectile");
-            if (projectileLayer >= 0 && projectileLayer <= 31) {
-                obj.layer = projectileLayer;
-            } else {
-                // "Projectile" layer tanımlı değilse varsayılan layer kullanılır
-                Debug.LogWarning("\"Projectile\" layer not found. Using \"Default\" layer instead. Consider adding a \"Projectile\" layer in Project Settings.");
-                obj.layer = LayerMask.NameToLayer("Default");
+            gameObject.layer = ignoreLayer;
+            
+            // Wait for the specified duration
+            yield return new WaitForSeconds(duration);
+            
+            // Restore original layer if the object still exists
+            if (gameObject != null)
+            {
+                gameObject.layer = originalLayer;
             }
         }
     }

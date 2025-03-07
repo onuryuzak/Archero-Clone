@@ -9,7 +9,6 @@ public class BounceDamageSkill : SkillData
     [Header("Bounce Settings")]
     [SerializeField] private int _bounceCount = 1; // Default number of bounces
     [SerializeField] private int _rageBounceCount = 3; // Number of bounces in rage mode
-    [SerializeField] private float _damageFalloff = 0.2f; // Damage reduction per bounce (percentage)
     
     private int currentBounceCount;
     
@@ -22,20 +21,16 @@ public class BounceDamageSkill : SkillData
     }
     
     /// <summary>
-    /// Returns the damage falloff per bounce
-    /// </summary>
-    public float GetDamageFalloff()
-    {
-        return _damageFalloff;
-    }
-    
-    /// <summary>
     /// Applies the rage mode effect to the skill
     /// </summary>
     public override void ApplyRageEffect(bool rageActive)
     {
         base.ApplyRageEffect(rageActive);
+        
+        // DIRECTLY set the bounce count based on rage state without adding to existing value
         currentBounceCount = rageActive ? _rageBounceCount : _bounceCount;
+        
+        Debug.Log($"[BounceDamageSkill] Applied rage effect. Rage Active: {rageActive}, Current Bounce Count: {currentBounceCount}");
     }
     
     /// <summary>

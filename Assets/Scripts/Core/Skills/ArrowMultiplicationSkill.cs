@@ -12,11 +12,28 @@ public class ArrowMultiplicationSkill : SkillData
     
     private int currentArrowCount;
     
+    // Property to access the protected _isRageActive field from base class
+    public bool IsRageActive => _isRageActive;
+    
+    private void OnEnable()
+    {
+        // Değişkeni başlat ve ApplyRageEffect metodunu çağır
+        ApplyRageEffect(_isRageActive);
+    }
+    
+
+    
     /// <summary>
     /// Returns the current number of arrows based on skill state
     /// </summary>
     public int GetArrowCount()
     {
+        // Eğer currentArrowCount 0 veya negatifse, ApplyRageEffect metodunu çağır
+        if (currentArrowCount <= 0)
+        {
+            ApplyRageEffect(_isRageActive);
+        }
+        
         return currentArrowCount;
     }
     
@@ -26,6 +43,8 @@ public class ArrowMultiplicationSkill : SkillData
     public override void ApplyRageEffect(bool rageActive)
     {
         base.ApplyRageEffect(rageActive);
+        
+        // Ok sayısını ayarla - bu metod hem başlangıçta hem de rage modu değiştiğinde çağrılır
         currentArrowCount = rageActive ? _rageArrowCount : _arrowCount;
     }
     

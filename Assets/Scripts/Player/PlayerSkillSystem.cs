@@ -20,28 +20,18 @@ public class PlayerSkillSystem : MonoBehaviour
             _weaponController = GetComponentInChildren<WeaponController>();
         
         InitializeSkills();
+        
+        // Oyun başlangıcında tüm becerileri pasif duruma getir
+        ResetAllSkills();
     }
     
     private void Update()
     {
-        // Update the rage mode skill
-        RageModeSkill rageSkill = GetSkill<RageModeSkill>();
-        if (rageSkill != null && rageSkill.IsActive)
-        {
-            rageSkill.UpdateRageMode(Time.deltaTime);
-            
-            // Apply rage mode to all skills
-            foreach (var skill in _skillMap.Values)
-            {
-                if (skill != rageSkill)
-                {
-                    skill.ApplyRageEffect(rageSkill.IsRageModeActive);
-                }
-            }
-            
-            // If attack speed skill is active, update the WeaponController
-            UpdateAttackSpeed();
-        }
+        // Rage beceriyi güncelle
+        UpdateRageSkill(Time.deltaTime);
+        
+        // If attack speed skill is active, update the attack speed
+        UpdateAttackSpeed();
     }
     
     /// <summary>
@@ -89,6 +79,44 @@ public class PlayerSkillSystem : MonoBehaviour
     {
         Debug.Log($"Skill Activated: {skill.SkillName}");
         
+        // If Rage Mode is activated, apply rage effect to all other active skills
+        if (skill.SkillType == GameEnums.SkillType.RageMode)
+        {
+            Debug.Log("[PlayerSkillSystem] Rage Mode activated, applying effect to all skills");
+            
+            // Apply rage effect to all skills
+            foreach (var s in _skillMap.Values)
+            {
+                if (s != skill)
+                {
+                    // Ensure bounce damage skill gets the rage effect
+                    if (s is BounceDamageSkill)
+                    {
+                        Debug.Log("[PlayerSkillSystem] Applying rage effect to Bounce Damage Skill");
+                    }
+                    
+                    s.ApplyRageEffect(true);
+                    
+                    // If the skill is active, reapply its effect with rage mode
+                    if (s.IsActive)
+                    {
+                        switch (s.SkillType)
+                        {
+                            case GameEnums.SkillType.ArrowMultiplication:
+                                ApplyArrowMultiplication();
+                                break;
+                            case GameEnums.SkillType.BounceDamage:
+                                ApplyBounceDamage();
+                                break;
+                            case GameEnums.SkillType.AttackSpeedIncrease:
+                                UpdateAttackSpeed();
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+        
         switch (skill.SkillType)
         {
             case GameEnums.SkillType.ArrowMultiplication:
@@ -96,6 +124,7 @@ public class PlayerSkillSystem : MonoBehaviour
                 break;
                 
             case GameEnums.SkillType.BounceDamage:
+                Debug.Log("[PlayerSkillSystem] Bounce skill activated");
                 ApplyBounceDamage();
                 break;
                 
@@ -108,7 +137,7 @@ public class PlayerSkillSystem : MonoBehaviour
                 break;
                 
             case GameEnums.SkillType.RageMode:
-                // Rage mode is processed in the Update method
+                // Rage mode effect is already applied above
                 break;
         }
     }
@@ -128,6 +157,7 @@ public class PlayerSkillSystem : MonoBehaviour
                 break;
                 
             case GameEnums.SkillType.BounceDamage:
+                Debug.Log("[PlayerSkillSystem] Bounce skill deactivated");
                 // When bounce is turned off, return to standard strategy
                 _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
                 break;
@@ -141,14 +171,29 @@ public class PlayerSkillSystem : MonoBehaviour
                 break;
                 
             case GameEnums.SkillType.RageMode:
+                Debug.Log("[PlayerSkillSystem] Rage Mode deactivated, removing effect from all skills");
                 // When rage mode is turned off, update all skills
                 foreach (var s in _skillMap.Values)
                 {
                     if (s != skill)
                     {
+                        // Ensure bounce damage skill loses the rage effect
+                        if (s is BounceDamageSkill)
+                        {
+                            Debug.Log("[PlayerSkillSystem] Removing rage effect from Bounce Damage Skill");
+                        }
+                        
                         s.ApplyRageEffect(false);
                     }
                 }
+                
+                // Özellikle BounceDamage için bir reapply ekleyelim
+                if (IsSkillActive(GameEnums.SkillType.BounceDamage))
+                {
+                    Debug.Log("[PlayerSkillSystem] Reapplying Bounce Damage skill after Rage deactivation");
+                    ApplyBounceDamage();
+                }
+                
                 UpdateAttackSpeed();
                 break;
         }
@@ -162,32 +207,50 @@ public class PlayerSkillSystem : MonoBehaviour
         if (_weaponController == null) return;
         
         ArrowMultiplicationSkill arrowSkill = GetSkill<ArrowMultiplicationSkill>();
-        if (arrowSkill != null && arrowSkill.IsActive)
+        if (arrowSkill != null)
         {
-            // Check bounce skill while applying arrow count
-            BounceDamageSkill bounceSkill = GetSkill<BounceDamageSkill>();
-            if (bounceSkill != null && bounceSkill.IsActive)
+            // Rage durumunu uygula - mevcut rage değerini kullan
+            arrowSkill.ApplyRageEffect(arrowSkill.IsRageActive);
+            
+            // Skill aktifse çoklu ok stratejisini uygula
+            if (arrowSkill.IsActive)
             {
-                // If both arrow multiplication and bounce are active, use multishot and bouncing combination
-                object[] parameters = new object[] { arrowSkill.GetArrowCount(), 15f };
-                IProjectileStrategy multiShotStrategy = ProjectileStrategyFactory.CreateStrategy(
-                    GameEnums.ProjectileStrategyType.MultiShot,
-                    parameters
-                );
-                _weaponController.SetProjectileStrategy(multiShotStrategy);
+                // Ok sayısını al
+                int arrowCount = arrowSkill.GetArrowCount();
+                Debug.Log($"[PlayerSkillSystem] Applying Arrow Multiplication with {arrowCount} arrows");
                 
-                // Note: In reality, a multishot + bouncing strategy could be created
-                // But in this example, we're only using multishot strategy
+                // Check bounce skill while applying arrow count
+                BounceDamageSkill bounceSkill = GetSkill<BounceDamageSkill>();
+                if (bounceSkill != null && bounceSkill.IsActive)
+                {
+                    // If both arrow multiplication and bounce are active, use multishot and bouncing combination
+                    object[] parameters = new object[] { arrowCount, 15f };
+                    IProjectileStrategy multiShotStrategy = ProjectileStrategyFactory.CreateStrategy(
+                        GameEnums.ProjectileStrategyType.MultiShot,
+                        parameters
+                    );
+                    _weaponController.SetProjectileStrategy(multiShotStrategy);
+                    
+                    Debug.Log($"[PlayerSkillSystem] Applied MultiShot strategy with Bounce, arrow count: {arrowCount}");
+                }
+                else
+                {
+                    // If only arrow multiplication is active
+                    object[] parameters = new object[] { arrowCount, 15f };
+                    IProjectileStrategy multiShotStrategy = ProjectileStrategyFactory.CreateStrategy(
+                        GameEnums.ProjectileStrategyType.MultiShot,
+                        parameters
+                    );
+                    _weaponController.SetProjectileStrategy(multiShotStrategy);
+                    
+                    Debug.Log($"[PlayerSkillSystem] Applied MultiShot strategy, arrow count: {arrowCount}");
+                }
             }
             else
             {
-                // If only arrow multiplication is active
-                object[] parameters = new object[] { arrowSkill.GetArrowCount(), 15f };
-                IProjectileStrategy multiShotStrategy = ProjectileStrategyFactory.CreateStrategy(
-                    GameEnums.ProjectileStrategyType.MultiShot,
-                    parameters
-                );
-                _weaponController.SetProjectileStrategy(multiShotStrategy);
+                // Skill pasifse standart atış stratejisine dön
+                _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+                Debug.Log("[PlayerSkillSystem] Arrow Multiplication deactivated, using standard strategy");
             }
         }
     }
@@ -202,13 +265,17 @@ public class PlayerSkillSystem : MonoBehaviour
         BounceDamageSkill bounceSkill = GetSkill<BounceDamageSkill>();
         if (bounceSkill != null && bounceSkill.IsActive)
         {
+            // Apply rage effect based on RageMode skill state
+            bool isRageActive = IsSkillActive(GameEnums.SkillType.RageMode);
+            bounceSkill.ApplyRageEffect(isRageActive);
+            
+            Debug.Log($"[PlayerSkillSystem] Configuring bouncing projectile strategy. Rage Active: {isRageActive}, Bounce Count: {bounceSkill.GetBounceCount()}");
+            
             // Check arrow multiplication skill
             ArrowMultiplicationSkill arrowSkill = GetSkill<ArrowMultiplicationSkill>();
             if (arrowSkill != null && arrowSkill.IsActive)
             {
                 // If both arrow multiplication and bounce are active, use multishot and bouncing combination
-                // Note: In reality, a multishot + bouncing strategy could be created
-                // But in this example, we're only using multishot strategy
                 object[] parameters = new object[] { arrowSkill.GetArrowCount(), 15f };
                 IProjectileStrategy multiShotStrategy = ProjectileStrategyFactory.CreateStrategy(
                     GameEnums.ProjectileStrategyType.MultiShot,
@@ -220,12 +287,23 @@ public class PlayerSkillSystem : MonoBehaviour
             {
                 // If only bounce is active
                 object[] parameters = new object[] { bounceSkill.GetBounceCount(), 0.25f };
+                
+                // Log the exact bounce count to verify
+                int bounceCount = bounceSkill.GetBounceCount();
+                Debug.Log($"[PlayerSkillSystem] Creating Bouncing strategy with EXACT bounce count: {bounceCount} (Rage active: {isRageActive})");
+                
                 IProjectileStrategy bouncingStrategy = ProjectileStrategyFactory.CreateStrategy(
                     GameEnums.ProjectileStrategyType.Bouncing,
                     parameters
                 );
                 _weaponController.SetProjectileStrategy(bouncingStrategy);
+                
+                Debug.Log($"[PlayerSkillSystem] Applied Bouncing strategy with bounce count: {bounceSkill.GetBounceCount()}");
             }
+        }
+        else 
+        {
+            Debug.Log("[PlayerSkillSystem] Bouncing projectile strategy disabled");
         }
     }
     
@@ -323,5 +401,66 @@ public class PlayerSkillSystem : MonoBehaviour
             return skill;
         }
         return null;
+    }
+    
+    /// <summary>
+    /// Belirli bir becerinin aktif olup olmadığını kontrol eder
+    /// </summary>
+    /// <param name="skillType">Kontrol edilecek beceri tipi</param>
+    /// <returns>Beceri aktifse true, değilse false</returns>
+    public bool IsSkillActive(GameEnums.SkillType skillType)
+    {
+        if (_skillMap.TryGetValue(skillType, out SkillData skill))
+        {
+            return skill.IsActive;
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Tüm becerileri pasif duruma getirir (oyun başlangıcında çağrılır)
+    /// </summary>
+    private void ResetAllSkills()
+    {
+        foreach (var skill in _skillMap.Values)
+        {
+            if (skill.IsActive)
+            {
+                // Eğer beceri aktifse, devre dışı bırak
+                skill.Deactivate();
+                Debug.Log($"[PlayerSkillSystem] Reset skill state: {skill.SkillName}");
+            }
+        }
+        
+        // Standart atış stratejisine dön
+        if (_weaponController != null)
+        {
+            _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+        }
+        
+        Debug.Log("[PlayerSkillSystem] All skills reset to inactive state");
+    }
+    
+    /// <summary>
+    /// Updates the rage mode skill
+    /// </summary>
+    private void UpdateRageSkill(float deltaTime)
+    {
+        // Get the rage mode skill
+        RageModeSkill rageSkill = GetSkill<RageModeSkill>();
+        if (rageSkill != null)
+        {
+            // Apply rage effect based on whether the skill is active
+            bool rageActive = rageSkill.IsActive && rageSkill.IsRageModeActive;
+            
+            // Apply rage mode to all skills
+            foreach (var skill in _skillMap.Values)
+            {
+                if (skill != rageSkill)
+                {
+                    skill.ApplyRageEffect(rageActive);
+                }
+            }
+        }
     }
 } 

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 85e18f080a959af41a960c4f6230327a, type: 3}
   m_Name: BounceDamageSkill
   m_EditorClassIdentifier: 
-  _skillName: 
+  _skillName: Bounce Damage
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 62307524dd1e58348bc053b1a0136d5e, type: 3}
   _skillType: 1
   _bounceCount: 1
   _rageBounceCount: 3

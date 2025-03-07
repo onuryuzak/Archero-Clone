@@ -58,7 +58,7 @@ public class EnemyManager : MonoBehaviour
         {
             float x = Random.Range(-_spawnAreaWidth / 2, _spawnAreaWidth / 2);
             float z = Random.Range(-_spawnAreaHeight / 2, _spawnAreaHeight / 2);
-            Vector3 position = new Vector3(x, 0, z);
+            Vector3 position = new Vector3(x, 1, z);
             
             // Check if this position is far enough from the player
             if (_playerTransform != null)
@@ -100,25 +100,5 @@ public class EnemyManager : MonoBehaviour
     {
         yield return new WaitForSeconds(_spawnDelay);
         SpawnEnemy();
-    }
-    
-    public Enemy GetNearestEnemy(Vector3 fromPosition)
-    {
-        Enemy nearestEnemy = null;
-        float nearestDistance = float.MaxValue;
-        
-        foreach (Enemy enemy in _activeEnemies)
-        {
-            if (enemy == null) continue;
-            
-            float distance = Vector3.Distance(fromPosition, enemy.transform.position);
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                nearestEnemy = enemy;
-            }
-        }
-        
-        return nearestEnemy;
     }
 } 

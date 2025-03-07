@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be801a3e5cb64494b838a50ce276c3a3, type: 3}
   m_Name: AttackSpeedSkill
   m_EditorClassIdentifier: 
-  _skillName: 
+  _skillName: Attak Speed Increase
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 66fc004d05b64ce45897852e1a259006, type: 3}
   _skillType: 3
   _speedMultiplier: 2
   _rageSpeedMultiplier: 4

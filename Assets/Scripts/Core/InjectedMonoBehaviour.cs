@@ -8,7 +8,7 @@ public abstract class InjectedMonoBehaviour : MonoBehaviour
     /// <summary>
     /// Flag to track if dependencies have been injected
     /// </summary>
-    protected bool DependenciesInjected { get; protected set; } = false;
+    public bool DependenciesInjected { get; protected set; } = false;
     
     /// <summary>
     /// Called in Awake to inject dependencies

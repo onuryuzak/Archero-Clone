@@ -83,7 +83,7 @@ public class DependencyContainer : MonoBehaviour
     private void RegisterCoreServices()
     {
         // Example: Find and register player data
-        PlayerData playerData = Resources.Load<PlayerData>("GameData/DefaultPlayerData");
+        PlayerData playerData = Resources.Load<PlayerData>("GameData/PlayerData");
         if (playerData != null)
         {
             Register(playerData);

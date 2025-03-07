@@ -12,9 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba7ae368dbdbdda4ab7144d9c123d8fc, type: 3}
   m_Name: RageModeSkill
   m_EditorClassIdentifier: 
-  _skillName: 
+  _skillName: Rage Mode
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 7e61f0184aaf8654b9d7d7e75403b9af, type: 3}
   _skillType: 4
-  _rageDuration: 10
-  _cooldown: 30

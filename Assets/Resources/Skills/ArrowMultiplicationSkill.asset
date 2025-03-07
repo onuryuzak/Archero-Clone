@@ -12,11 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3eeed9ee65ddc0b47afd07712908815f, type: 3}
   m_Name: ArrowMultiplicationSkill
   m_EditorClassIdentifier: 
-  _skillName: 
+  _skillName: Arrow Multiplication
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: b5660dcc445534749864e7850724c8ca, type: 3}
   _skillType: 0
-  _baseValue: 2
-  _rageModifier: 2
-  _arrowCount: 2
+  _arrowCount: 1
   _rageArrowCount: 4

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a3dd2c9f02f56f4e90b7f6992b444f4, type: 3}
   m_Name: BurnDamageSkill
   m_EditorClassIdentifier: 
-  _skillName: 
+  _skillName: Burn Damage
   _description: 
-  _icon: {fileID: 0}
+  _icon: {fileID: 21300000, guid: 43aaaed60bc9aa142b09d931296cdd9b, type: 3}
   _skillType: 2
   _burnDamagePerSecond: 5
   _burnDuration: 2

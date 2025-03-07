@@ -4,141 +4,267 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Projectile class that handles movement, collision, and damage application
+/// Handles projectile movement, collision, and damage
 /// </summary>
 public class Projectile : MonoBehaviour
 {
+    // Physics settings
     [Header("Physics Settings")]
-    [SerializeField] private float _gravity = 9.8f;
-    [SerializeField] private float _maxLifetime = 5f;
-    [SerializeField] private LayerMask _collisionLayers;
+    [SerializeField] private bool _useGravity = false;
+    [SerializeField] private float _gravityScale = 1f;
+    [SerializeField] private float _maxLifetime = 5f; // Maximum time before auto-destruction
+    [SerializeField] private LayerMask _collisionLayers; // What layers this projectile collides with
     
     [Header("Visual Effects")]
     [SerializeField] private GameObject _hitEffectPrefab;
     
-    private Vector3 _initialVelocity;
-    private float _damage;
-    private float _elapsedTime;
-    private bool _isInitialized;
+    [Header("Advanced Physics")]
+    [SerializeField] private bool _useAdvancedPhysics = true;
+    [SerializeField] private float _initialAngle = 15f; // Initial angle in degrees
+    [SerializeField] private float _dragCoefficient = 0.01f; // Air resistance factor
     
-    // Hit event - other components can subscribe to this
-    public event Action<GameObject, Vector3> OnHit;
+    // State
+    private Vector3 _direction;
+    private float _speed;  // Bu değişkeni PlayerData'dan gelecek değeri saklamak için kullanacağız
+    private float _damage;
+    private float _lifetime = 0f;
+    private bool _isPaused = false; // Added to support pausing movement
+    
+    // Cache
+    private Transform _transform;
+    
+    private Vector3 _initialVelocity; // Initial velocity vector
+    private Vector3 _currentVelocity; // Current velocity
+    private Vector3 _acceleration;    // Current acceleration
     
     // Properties
+    public float Speed => _speed;
     public float Damage => _damage;
-    public float Speed => _initialVelocity.magnitude;
     
-    public void Initialize(Vector3 direction, float speed, float damageAmount)
+    private void Awake()
     {
-        // Calculate initial velocity based on direction and speed
-        _initialVelocity = direction * speed;
-        _damage = damageAmount;
-        _elapsedTime = 0f;
-        _isInitialized = true;
-        
-        // Rotate to face the initial direction
-        transform.rotation = Quaternion.LookRotation(direction);
+        _transform = transform;
     }
     
+    /// <summary>
+    /// Initializes the projectile with direction, speed, and damage
+    /// </summary>
+    public void Initialize(Vector3 direction, float speed, float damage)
+    {
+        _direction = direction.normalized;
+        _speed = speed;
+        _damage = damage;
+        
+        // Set forward direction to match movement direction
+        _transform.forward = _direction;
+        
+        // Calculate initial velocity for advanced physics
+        if (_useAdvancedPhysics)
+        {
+            // Apply initial angle if using gravity
+            if (_useGravity && _initialAngle != 0)
+            {
+                // Rotate the direction vector up by the initial angle
+                Quaternion rotation = Quaternion.AngleAxis(_initialAngle, Vector3.Cross(_direction, Vector3.up).normalized);
+                _direction = rotation * _direction;
+                _transform.forward = _direction;
+            }
+            
+            _initialVelocity = _direction * _speed;
+            _currentVelocity = _initialVelocity;
+        }
+    }
+    
+    /// <summary>
+    /// Updates the projectile position and rotation based on physics
+    /// </summary>
     private void Update()
     {
-        if (!_isInitialized) return;
+        if (_isPaused) return; // Skip movement if paused
         
-        // Update elapsed time
-        _elapsedTime += Time.deltaTime;
-        
-        // Calculate position based on physics
-        Vector3 currentPosition = transform.position;
-        Vector3 previousPosition = currentPosition;
-        
-        // Apply gravity and calculate new position
-        // s = u*t + 0.5*a*t^2
-        Vector3 newPosition = transform.position + _initialVelocity * Time.deltaTime;
-        newPosition.y -= 0.5f * _gravity * Time.deltaTime * Time.deltaTime;
-        
-        // Update velocity due to gravity
-        _initialVelocity.y -= _gravity * Time.deltaTime;
-        
-        // Check for collision using raycast
-        Vector3 direction = newPosition - currentPosition;
-        float distance = direction.magnitude;
-        
-        RaycastHit hit;
-        if (Physics.Raycast(currentPosition, direction.normalized, out hit, distance, _collisionLayers))
+        // Count lifetime and destroy if exceeded maximum
+        _lifetime += Time.deltaTime;
+        if (_lifetime > _maxLifetime)
         {
-            HandleCollision(hit);
+            Destroy(gameObject);
             return;
         }
         
-        // Update position
-        transform.position = newPosition;
+        Vector3 oldPosition = _transform.position;
         
-        // Update rotation to follow trajectory
-        if (_initialVelocity.sqrMagnitude > 0.1f)
+        if (_useAdvancedPhysics)
         {
-            transform.rotation = Quaternion.LookRotation(_initialVelocity.normalized);
+            // Calculate acceleration (gravity + drag)
+            _acceleration = Vector3.zero;
+            
+            // Apply gravity
+            if (_useGravity)
+            {
+                _acceleration += Physics.gravity * _gravityScale;
+            }
+            
+            // Apply drag (air resistance) - proportional to velocity squared
+            if (_dragCoefficient > 0 && _currentVelocity.magnitude > 0)
+            {
+                Vector3 dragForce = -_currentVelocity.normalized * _dragCoefficient * _currentVelocity.sqrMagnitude;
+                _acceleration += dragForce;
+            }
+            
+            // Update velocity using verlet integration (more stable than Euler)
+            _currentVelocity += _acceleration * Time.deltaTime;
+            
+            // Update position
+            _transform.position += _currentVelocity * Time.deltaTime;
+            
+            // Orient projectile along velocity direction
+            if (_currentVelocity.sqrMagnitude > 0.001f)
+            {
+                _transform.forward = _currentVelocity.normalized;
+            }
+        }
+        else
+        {
+            // Use simple physics (legacy behavior)
+            // Apply gravity if enabled
+            if (_useGravity)
+            {
+                _direction += Physics.gravity * _gravityScale * Time.deltaTime;
+            }
+            
+            // Move in the current direction
+            Vector3 movement = _direction * _speed * Time.deltaTime;
+            _transform.position += movement;
+            
+            // Orient in the direction of movement if using gravity
+            if (_useGravity && _direction != Vector3.zero)
+            {
+                _transform.forward = _direction;
+            }
         }
         
-        // Destroy if lifetime exceeds maximum
-        if (_elapsedTime >= _maxLifetime)
+        // Calculate movement vector for collision detection
+        Vector3 movementVector = _transform.position - oldPosition;
+        
+        // Check for collisions
+        if (movementVector.magnitude > 0 && Physics.Raycast(oldPosition, movementVector.normalized, out RaycastHit hit, movementVector.magnitude, _collisionLayers))
         {
-            Destroy(gameObject);
+            HandleCollision(hit);
         }
     }
     
+    /// <summary>
+    /// Pauses the projectile's movement
+    /// </summary>
+    public void PauseMovement()
+    {
+        _isPaused = true;
+    }
+    
+    /// <summary>
+    /// Resumes the projectile's movement
+    /// </summary>
+    public void ResumeMovement()
+    {
+        _isPaused = false;
+    }
+    
+    /// <summary>
+    /// Handles collision events
+    /// </summary>
     private void HandleCollision(RaycastHit hit)
     {
-        // Check if the hit object has a damageable component
-        IDamageable damageable = hit.collider.GetComponent<IDamageable>();
+        // Get the object we hit
+        GameObject hitObject = hit.collider.gameObject;
         
+        // Check if the hit object is damageable
+        IDamageable damageable = hitObject.GetComponent<IDamageable>();
         if (damageable != null)
         {
             // Apply damage
             damageable.TakeDamage(_damage);
             
-            // Check for burn effect
-            ApplyBurnEffect(hit.collider.gameObject);
+            // Burada sadece görsel efekt eklemek istiyorsanız:
+            Enemy enemy = hitObject.GetComponent<Enemy>();
+            if (enemy != null)
+            {
+                // Burn efekti için basit görsel efekt eklenebilir (opsiyonel)
+                // Örnek: enemy.gameObject.AddComponent<BurnEffect>();
+            }
         }
         
-        // Trigger OnHit event
-        OnHit?.Invoke(hit.collider.gameObject, hit.point);
-        
-        // Spawn hit effect
+        // Instantiate hit effect if available
         if (_hitEffectPrefab != null)
         {
             Instantiate(_hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
         }
         
-        // Destroy the projectile
-        Destroy(gameObject);
+        // Invoke the hit event
+        OnHit?.Invoke(hitObject, hit.point);
+        
+        // Eğer BouncingProjectile componenti yoksa, mermiyi yok et
+        BouncingProjectile bouncer = GetComponent<BouncingProjectile>();
+        if (bouncer == null)
+        {
+            // Mermiyi yok et - Bounce özelliği olmayan projeler ilk çarpışmada yok edilir
+            Destroy(gameObject); // Slight delay to ensure hit effects are shown
+        }
+        // BouncingProjectile componenti varsa, HandleHit metodu sekme işlemini yönetecek
     }
     
     /// <summary>
-    /// Applies burn effect to the target if burn damage skill is active
+    /// Handle collision with triggers
     /// </summary>
-    private void ApplyBurnEffect(GameObject target)
+    private void OnTriggerEnter(Collider other)
     {
-        // Find skill system
-        PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
-        if (skillSystem == null) return;
-        
-        // Check for burn damage skill
-        BurnDamageSkill burnSkill = skillSystem.GetSkill<BurnDamageSkill>();
-        if (burnSkill != null && burnSkill.IsActive)
+        // Check if this layer is in our collision layers
+        if (((1 << other.gameObject.layer) & _collisionLayers) != 0)
         {
-            // Get or add BurnEffect component to the target
-            BurnEffect burnEffect = target.GetComponent<BurnEffect>();
-            if (burnEffect == null)
-            {
-                burnEffect = target.AddComponent<BurnEffect>();
-                burnEffect.SetMaxStacks(burnSkill.GetMaxStacks());
-            }
+            // Skip collision if paused (added to support the bounce feature)
+            if (_isPaused) return;
             
-            // Apply burn effect
-            burnEffect.AddBurnStack(
-                burnSkill.GetBurnDuration(),
-                burnSkill.GetBurnDamagePerSecond()
-            );
+            // Trigger için doğrudan GameObject ve konum kullanarak çarpışma işlemi
+            HandleTriggerCollision(other.gameObject, transform.position);
         }
+    }
+    
+    /// <summary>
+    /// Trigger çarpışmalarını yönetir
+    /// </summary>
+    private void HandleTriggerCollision(GameObject hitObject, Vector3 hitPosition)
+    {
+        // Hasar verilebilir nesne mi kontrol et
+        IDamageable damageable = hitObject.GetComponent<IDamageable>();
+        if (damageable != null)
+        {
+            // Hasar uygula
+            damageable.TakeDamage(_damage);
+            
+            // Görsel efektler eklenebilir
+            
+            // OnHit olayını tetikle
+            OnHit?.Invoke(hitObject, hitPosition);
+            
+            // Eğer BouncingProjectile componenti yoksa, mermiyi yok et
+            BouncingProjectile bouncer = GetComponent<BouncingProjectile>();
+            if (bouncer == null)
+            {
+                // Mermiyi yok et - Bounce özelliği olmayan projeler ilk çarpışmada yok edilir
+                Destroy(gameObject); // Slight delay to ensure hit effects are shown
+            }
+            // BouncingProjectile componenti varsa, HandleHit metodu sekme işlemini yönetecek
+        }
+    }
+    
+    // Events
+    public event Action<GameObject, Vector3> OnHit;
+
+    /// <summary>
+    /// Gravityi açıp kapatmak için public method
+    /// </summary>
+    /// <param name="useGravity">Gravity aktif olsun mu?</param>
+    public void SetGravity(bool useGravity)
+    {
+        _useGravity = useGravity;
+        Debug.Log($"[Projectile] Gravity set to: {useGravity}");
     }
 } 

@@ -12,7 +12,7 @@ public class WeaponController : InjectedMonoBehaviour
     [SerializeField] private Transform _firePoint;
 
     // Variables that will be set from PlayerData
-    private float _projectileSpeed = 20f;
+    private float _projectileSpeed = 20f; // Defaults to 20, but will be updated from PlayerData
     private float _baseDamage = 10f;
     private float _baseAttackRate = 1.0f; // Attacks per second
     private float _attackRateMultiplier = 1.0f; // Multiplier from skills
@@ -24,7 +24,7 @@ public class WeaponController : InjectedMonoBehaviour
     private PlayerData _playerData;
 
     // Property to calculate the actual attack rate with multiplier
-    public float ActualAttackRate => _baseAttackRate * _attackRateMultiplier;
+    public float ActualAttackRate => Mathf.Max(0.1f, _baseAttackRate * _attackRateMultiplier);
 
     protected override void InjectDependencies()
     {
@@ -54,6 +54,10 @@ public class WeaponController : InjectedMonoBehaviour
         {
             _firePoint = transform;
         }
+        
+        // Initialize cooldown to allow immediate firing
+        _attackCooldown = 0f;
+        _canAttack = true;
     }
 
     /// <summary>
@@ -70,7 +74,7 @@ public class WeaponController : InjectedMonoBehaviour
         
         _playerData = playerData;
         
-        // Set variables from player data
+        // Get values from PlayerData
         _projectileSpeed = _playerData.ProjectileSpeed;
         _baseDamage = _playerData.BaseDamage * _playerData.DamageMultiplier;
         _baseAttackRate = _playerData.BaseAttackRate;
@@ -136,6 +140,12 @@ public class WeaponController : InjectedMonoBehaviour
 
     private void Update()
     {
+        // Debug the attack rate values
+        if (Time.frameCount % 60 == 0) // Log every 60 frames
+        {
+            Debug.Log($"Attack Rate: Base={_baseAttackRate}, Multiplier={_attackRateMultiplier}, Actual={ActualAttackRate}");
+        }
+        
         // Update cooldown
         if (!_canAttack)
         {
@@ -143,10 +153,11 @@ public class WeaponController : InjectedMonoBehaviour
             _attackCooldown -= Time.deltaTime;
             
             // When cooldown reaches zero, allow attacking again
-            if (_attackCooldown <= 0)
+            if (_attackCooldown <= 0f)
             {
+                _attackCooldown = 0f; // Ensure it's exactly zero to avoid floating point errors
                 _canAttack = true;
-                Debug.Log("Weapon ready to fire again"); // Geçici debug log
+                Debug.Log("Weapon ready to fire again");
             }
         }
     }
@@ -158,6 +169,7 @@ public class WeaponController : InjectedMonoBehaviour
     /// <returns>True if attack was successful</returns>
     public bool TryAttack(Vector3 targetPosition)
     {
+        
         if (!_canAttack || _projectilePrefab == null)
             return false;
 
@@ -193,8 +205,26 @@ public class WeaponController : InjectedMonoBehaviour
     /// </summary>
     public void SetAttackRateMultiplier(float multiplier)
     {
+        float oldMultiplier = _attackRateMultiplier;
         _attackRateMultiplier = Mathf.Max(0.1f, multiplier); // Ensure it doesn't go too low
-        _attackCooldown = 1f / ActualAttackRate; // Recalculate cooldown
+        
+        // If we're currently on cooldown, adjust the cooldown proportionally to reflect the new rate
+        if (!_canAttack && _attackCooldown > 0)
+        {
+            float oldAttackRate = _baseAttackRate * oldMultiplier;
+            float newAttackRate = ActualAttackRate;
+            
+            if (oldAttackRate > 0 && newAttackRate > 0)
+            {
+                // Calculate what percentage of the cooldown is remaining
+                float oldCooldownTotal = 1f / oldAttackRate;
+                float remainingPercentage = _attackCooldown / oldCooldownTotal;
+                
+                // Apply that same percentage to the new cooldown
+                float newCooldownTotal = 1f / newAttackRate;
+                _attackCooldown = newCooldownTotal * remainingPercentage;
+            }
+        }
     }
 
     /// <summary>
