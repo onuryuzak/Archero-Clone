@@ -197,10 +197,6 @@ public class Projectile : MonoBehaviour
                     {
                         // Add or get BurnEffect component
                         BurnEffect burnEffect = enemy.GetComponent<BurnEffect>();
-                        if (burnEffect == null)
-                        {
-                            burnEffect = enemy.gameObject.AddComponent<BurnEffect>();
-                        }
                         
                         // Configure max stacks
                         burnEffect.SetMaxStacks(burnSkill.GetMaxStacks());
