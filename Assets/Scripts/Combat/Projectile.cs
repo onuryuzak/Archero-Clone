@@ -183,12 +183,37 @@ public class Projectile : MonoBehaviour
             // Apply damage
             damageable.TakeDamage(_damage);
             
-            // Burada sadece görsel efekt eklemek istiyorsanız:
+            // Check if we need to apply burn damage
             Enemy enemy = hitObject.GetComponent<Enemy>();
             if (enemy != null)
             {
-                // Burn efekti için basit görsel efekt eklenebilir (opsiyonel)
-                // Örnek: enemy.gameObject.AddComponent<BurnEffect>();
+                // Find if there's an active skill system in the scene
+                PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
+                if (skillSystem != null && skillSystem.IsSkillActive(GameEnums.SkillType.BurnDamage))
+                {
+                    // Get burn skill data
+                    BurnDamageSkill burnSkill = skillSystem.GetSkill<BurnDamageSkill>();
+                    if (burnSkill != null)
+                    {
+                        // Add or get BurnEffect component
+                        BurnEffect burnEffect = enemy.GetComponent<BurnEffect>();
+                        if (burnEffect == null)
+                        {
+                            burnEffect = enemy.gameObject.AddComponent<BurnEffect>();
+                        }
+                        
+                        // Configure max stacks
+                        burnEffect.SetMaxStacks(burnSkill.GetMaxStacks());
+                        
+                        // Apply burn stack with appropriate duration and damage
+                        burnEffect.AddBurnStack(
+                            burnSkill.GetBurnDuration(),
+                            burnSkill.GetBurnDamagePerSecond()
+                        );
+                        
+                        Debug.Log($"Applied burn effect to {enemy.name}: {burnSkill.GetBurnDamagePerSecond()} dps for {burnSkill.GetBurnDuration()} seconds");
+                    }
+                }
             }
         }
         
@@ -206,7 +231,7 @@ public class Projectile : MonoBehaviour
         if (bouncer == null)
         {
             // Mermiyi yok et - Bounce özelliği olmayan projeler ilk çarpışmada yok edilir
-            Destroy(gameObject); // Slight delay to ensure hit effects are shown
+            Destroy(gameObject, 0.05f); // Slight delay to ensure hit effects are shown
         }
         // BouncingProjectile componenti varsa, HandleHit metodu sekme işlemini yönetecek
     }

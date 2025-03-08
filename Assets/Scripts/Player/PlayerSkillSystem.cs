@@ -82,21 +82,11 @@ public class PlayerSkillSystem : MonoBehaviour
         // If Rage Mode is activated, apply rage effect to all other active skills
         if (skill.SkillType == GameEnums.SkillType.RageMode)
         {
-            Debug.Log("[PlayerSkillSystem] Rage Mode activated, applying effect to all skills");
-            
-            // Apply rage effect to all skills
             foreach (var s in _skillMap.Values)
             {
                 if (s != skill)
                 {
-                    // Ensure bounce damage skill gets the rage effect
-                    if (s is BounceDamageSkill)
-                    {
-                        Debug.Log("[PlayerSkillSystem] Applying rage effect to Bounce Damage Skill");
-                    }
-                    
                     s.ApplyRageEffect(true);
-                    
                     // If the skill is active, reapply its effect with rage mode
                     if (s.IsActive)
                     {
@@ -171,29 +161,14 @@ public class PlayerSkillSystem : MonoBehaviour
                 break;
                 
             case GameEnums.SkillType.RageMode:
-                Debug.Log("[PlayerSkillSystem] Rage Mode deactivated, removing effect from all skills");
                 // When rage mode is turned off, update all skills
                 foreach (var s in _skillMap.Values)
                 {
                     if (s != skill)
                     {
-                        // Ensure bounce damage skill loses the rage effect
-                        if (s is BounceDamageSkill)
-                        {
-                            Debug.Log("[PlayerSkillSystem] Removing rage effect from Bounce Damage Skill");
-                        }
-                        
                         s.ApplyRageEffect(false);
                     }
                 }
-                
-                // Özellikle BounceDamage için bir reapply ekleyelim
-                if (IsSkillActive(GameEnums.SkillType.BounceDamage))
-                {
-                    Debug.Log("[PlayerSkillSystem] Reapplying Bounce Damage skill after Rage deactivation");
-                    ApplyBounceDamage();
-                }
-                
                 UpdateAttackSpeed();
                 break;
         }
@@ -287,11 +262,6 @@ public class PlayerSkillSystem : MonoBehaviour
             {
                 // If only bounce is active
                 object[] parameters = new object[] { bounceSkill.GetBounceCount(), 0.25f };
-                
-                // Log the exact bounce count to verify
-                int bounceCount = bounceSkill.GetBounceCount();
-                Debug.Log($"[PlayerSkillSystem] Creating Bouncing strategy with EXACT bounce count: {bounceCount} (Rage active: {isRageActive})");
-                
                 IProjectileStrategy bouncingStrategy = ProjectileStrategyFactory.CreateStrategy(
                     GameEnums.ProjectileStrategyType.Bouncing,
                     parameters

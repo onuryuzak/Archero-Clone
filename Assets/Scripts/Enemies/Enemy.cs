@@ -7,8 +7,6 @@ public class Enemy : MonoBehaviour, IDamageable
 {
     [Header("Enemy Settings")]
     [SerializeField] private float _maxHealth = 100f;
-    [SerializeField] private GameObject _healthBarPrefab;
-    [SerializeField] private Vector3 _healthBarOffset = new Vector3(0, 1.5f, 0);
     
     private float _currentHealth;
     private HealthBar _healthBar;
@@ -19,40 +17,36 @@ public class Enemy : MonoBehaviour, IDamageable
     public void Initialize()
     {
         _currentHealth = _maxHealth;
-        InitializeHealthBar();
-    }
-    
-    private void InitializeHealthBar()
-    {
-        if (_healthBarPrefab != null)
+        // If a health bar reference is provided, initialize it
+        if (_healthBar != null)
         {
-            GameObject healthBarObj = Instantiate(_healthBarPrefab, transform.position + _healthBarOffset, Quaternion.identity);
-            healthBarObj.transform.SetParent(transform);
-            _healthBar = healthBarObj.GetComponent<HealthBar>();
-            
+            _healthBar.Initialize(_maxHealth, transform);
+        }
+        // If no health bar reference, try to find one in children
+        else
+        {
+            _healthBar = GetComponentInChildren<HealthBar>();
             if (_healthBar != null)
             {
-                _healthBar.Initialize(_maxHealth);
-            }
-            else
-            {
-                Debug.LogError("HealthBar component not found on healthBarPrefab!");
+                _healthBar.Initialize(_maxHealth, transform);
             }
         }
     }
     
-    public void TakeDamage(float damageAmount)
+   
+    
+    public void TakeDamage(float damage)
     {
-        if (_currentHealth <= 0) return;
-        
-        _currentHealth -= damageAmount;
+        _currentHealth -= damage;
+        _currentHealth = Mathf.Max(0, _currentHealth);
         
         // Update health bar
         if (_healthBar != null)
         {
-            _healthBar.UpdateHealthBar(_currentHealth, _maxHealth);
+            _healthBar.UpdateHealth(_currentHealth);
         }
         
+        // Check if dead
         if (_currentHealth <= 0)
         {
             Die();

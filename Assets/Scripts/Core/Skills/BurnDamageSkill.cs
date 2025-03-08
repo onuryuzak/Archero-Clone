@@ -53,11 +53,21 @@ public class BurnDamageSkill : SkillData
     public override void ApplyRageEffect(bool rageActive)
     {
         base.ApplyRageEffect(rageActive);
+        
+        // Store old value for debugging
+        float oldDuration = currentBurnDuration;
+        
+        // Update to new duration based on rage state
         currentBurnDuration = rageActive ? _rageBurnDuration : _burnDuration;
+        
+        Debug.Log($"[BurnDamageSkill] Rage effect {(rageActive ? "applied" : "removed")}. Burn duration: {oldDuration} -> {currentBurnDuration}");
     }
 
+    /// <summary>
+    /// Returns a base value for this skill's effect
+    /// </summary>
     public override float GetValue()
     {
-        return 0;
+        return GetTotalBurnDamage(); // Return the total damage instead of 0
     }
 } 

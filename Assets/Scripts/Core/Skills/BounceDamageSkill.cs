@@ -26,11 +26,7 @@ public class BounceDamageSkill : SkillData
     public override void ApplyRageEffect(bool rageActive)
     {
         base.ApplyRageEffect(rageActive);
-        
-        // DIRECTLY set the bounce count based on rage state without adding to existing value
         currentBounceCount = rageActive ? _rageBounceCount : _bounceCount;
-        
-        Debug.Log($"[BounceDamageSkill] Applied rage effect. Rage Active: {rageActive}, Current Bounce Count: {currentBounceCount}");
     }
     
     /// <summary>

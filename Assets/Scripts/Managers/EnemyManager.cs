@@ -12,7 +12,6 @@ public class EnemyManager : MonoBehaviour
     [Header("Spawn Area")]
     [SerializeField] private float _spawnAreaWidth = 8f;
     [SerializeField] private float _spawnAreaHeight = 12f;
-    [SerializeField] private float _minDistanceFromPlayer = 3f;
     
     private List<Enemy> _activeEnemies = new List<Enemy>();
     private Transform _playerTransform;
@@ -59,21 +58,8 @@ public class EnemyManager : MonoBehaviour
             float x = Random.Range(-_spawnAreaWidth / 2, _spawnAreaWidth / 2);
             float z = Random.Range(-_spawnAreaHeight / 2, _spawnAreaHeight / 2);
             Vector3 position = new Vector3(x, 1, z);
-            
-            // Check if this position is far enough from the player
-            if (_playerTransform != null)
-            {
-                float distanceToPlayer = Vector3.Distance(position, _playerTransform.position);
-                if (distanceToPlayer >= _minDistanceFromPlayer)
-                {
-                    return position;
-                }
-            }
-            else
-            {
-                // If player reference is missing, just return the position
                 return position;
-            }
+            
         }
         
         // If we can't find a good position after several attempts, just use a random one

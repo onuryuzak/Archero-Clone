@@ -57,15 +57,14 @@ public class BouncingProjectile : MonoBehaviour
     /// </summary>
     public void Initialize(int bounceCount, float falloffPercentage, float baseDamage)
     {
-        // Use the exact bounce count without any modifications
-        _remainingBounces = bounceCount;
+        _remainingBounces = Mathf.Max(0, bounceCount);
         _damageFalloffPercentage = Mathf.Clamp01(falloffPercentage);
         _originalDamage = baseDamage;
         _currentDamage = baseDamage;
         
-        // Log the exact value to verify
-        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] EXACT bounce count set: {_remainingBounces} (no additions)");
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Initialized with {_remainingBounces} bounces, damage:{_currentDamage}");
     }
+    
 
     
     /// <summary>
@@ -75,7 +74,7 @@ public class BouncingProjectile : MonoBehaviour
     {
         if (hitObject == null) return;
         
-        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Hit object: {hitObject.name}, Current bounce count: {_remainingBounces}");
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Hit object: {hitObject.name}");
         
         // If we're not already tracking this target, handle the hit
         if (!_hitTargets.Contains(hitObject))
@@ -110,7 +109,7 @@ public class BouncingProjectile : MonoBehaviour
         if (_remainingBounces > 0)
         {
             _remainingBounces--;
-            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Bounces remaining after decrement: {_remainingBounces} (Total hits so far: {_hitTargets.Count})");
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Bounces remaining: {_remainingBounces}");
             
             // Pause the projectile momentarily to prepare for bounce
             _projectile.PauseMovement();
@@ -122,7 +121,7 @@ public class BouncingProjectile : MonoBehaviour
         {
             // No more bounces, destroy the projectile
             Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No more bounces, destroying");
-            Destroy(gameObject);
+            Destroy(gameObject, 0.05f);
         }
     }
     

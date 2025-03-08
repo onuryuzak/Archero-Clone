@@ -156,7 +156,6 @@ MonoBehaviour:
   _spawnDelay: 1
   _spawnAreaWidth: 8
   _spawnAreaHeight: 12
-  _minDistanceFromPlayer: 3
 --- !u!4 &90558254
 Transform:
   m_ObjectHideFlags: 0
@@ -554,6 +553,11 @@ MonoBehaviour:
   _maxX: 50
   _minZ: -50
   _maxZ: 50
+  _currentVelocity: {x: 0, y: 0, z: 0}
+  _mainCamera: {fileID: 0}
+  _targetPosition: {x: 0, y: 0, z: 0}
+  _isTransitioning: 0
+  _transitionTarget: {x: 0, y: 0, z: 0}
 --- !u!1 &489074598
 GameObject:
   m_ObjectHideFlags: 0
