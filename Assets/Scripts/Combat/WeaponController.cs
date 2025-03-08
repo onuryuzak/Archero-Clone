@@ -140,11 +140,6 @@ public class WeaponController : InjectedMonoBehaviour
 
     private void Update()
     {
-        // Debug the attack rate values
-        if (Time.frameCount % 60 == 0) // Log every 60 frames
-        {
-            Debug.Log($"Attack Rate: Base={_baseAttackRate}, Multiplier={_attackRateMultiplier}, Actual={ActualAttackRate}");
-        }
         
         // Update cooldown
         if (!_canAttack)

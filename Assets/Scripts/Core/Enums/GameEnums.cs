@@ -4,7 +4,7 @@
 public static class GameEnums
 {
     /// <summary>
-    /// Yetenek türlerini tanımlar
+    /// Defines types of skills
     /// </summary>
     public enum SkillType
     {
@@ -16,7 +16,7 @@ public static class GameEnums
     }
     
     /// <summary>
-    /// Mermi stratejisi türlerini tanımlar
+    /// Defines types of projectile strategies
     /// </summary>
     public enum ProjectileStrategyType
     {
@@ -24,20 +24,6 @@ public static class GameEnums
         MultiShot,
         Bouncing,
         Burning,
-        Piercing,
-        Homing,
-        Explosive
-    }
-    
-    /// <summary>
-    /// Hasar türlerini tanımlar
-    /// </summary>
-    public enum DamageType
-    {
-        Normal,
-        Burn,
-        Poison,
-        Ice,
-        Lightning
+        AttackSpeed
     }
 } 

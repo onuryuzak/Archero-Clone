@@ -101,6 +101,9 @@ public class PlayerSkillSystem : MonoBehaviour
                             case GameEnums.SkillType.AttackSpeedIncrease:
                                 UpdateAttackSpeed();
                                 break;
+                            case GameEnums.SkillType.BurnDamage:
+                                ApplyBurnDamage();
+                                break;
                         }
                     }
                 }
@@ -119,7 +122,8 @@ public class PlayerSkillSystem : MonoBehaviour
                 break;
                 
             case GameEnums.SkillType.BurnDamage:
-                // Burn damage is applied in the Projectile class
+                Debug.Log("[PlayerSkillSystem] Burn damage skill activated");
+                ApplyBurnDamage();
                 break;
                 
             case GameEnums.SkillType.AttackSpeedIncrease:
@@ -142,18 +146,65 @@ public class PlayerSkillSystem : MonoBehaviour
         switch (skill.SkillType)
         {
             case GameEnums.SkillType.ArrowMultiplication:
-                // When arrow multiplication is turned off, return to standard strategy
-                _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+                // When arrow multiplication is turned off, check if other skills are active
+                if (IsSkillActive(GameEnums.SkillType.BounceDamage)) 
+                {
+                    ApplyBounceDamage();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.BurnDamage))
+                {
+                    ApplyBurnDamage();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.AttackSpeedIncrease))
+                {
+                    UpdateAttackSpeed();
+                }
+                else
+                {
+                    _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+                }
                 break;
                 
             case GameEnums.SkillType.BounceDamage:
                 Debug.Log("[PlayerSkillSystem] Bounce skill deactivated");
-                // When bounce is turned off, return to standard strategy
-                _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+                // When bounce is turned off, check if other skills are active
+                if (IsSkillActive(GameEnums.SkillType.ArrowMultiplication)) 
+                {
+                    ApplyArrowMultiplication();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.BurnDamage))
+                {
+                    ApplyBurnDamage();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.AttackSpeedIncrease))
+                {
+                    UpdateAttackSpeed();
+                }
+                else
+                {
+                    _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+                }
                 break;
                 
             case GameEnums.SkillType.BurnDamage:
-                // Burn damage is handled in the Projectile class
+                Debug.Log("[PlayerSkillSystem] Burn damage skill deactivated");
+                // When burn damage is turned off, check if other skills are active
+                if (IsSkillActive(GameEnums.SkillType.ArrowMultiplication)) 
+                {
+                    ApplyArrowMultiplication();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.BounceDamage))
+                {
+                    ApplyBounceDamage();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.AttackSpeedIncrease))
+                {
+                    UpdateAttackSpeed();
+                }
+                else
+                {
+                    _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+                }
                 break;
                 
             case GameEnums.SkillType.AttackSpeedIncrease:
@@ -169,7 +220,24 @@ public class PlayerSkillSystem : MonoBehaviour
                         s.ApplyRageEffect(false);
                     }
                 }
-                UpdateAttackSpeed();
+                
+                // Reapply all active skills without rage effect
+                if (IsSkillActive(GameEnums.SkillType.ArrowMultiplication))
+                {
+                    ApplyArrowMultiplication();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.BounceDamage))
+                {
+                    ApplyBounceDamage();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.BurnDamage))
+                {
+                    ApplyBurnDamage();
+                }
+                else if (IsSkillActive(GameEnums.SkillType.AttackSpeedIncrease))
+                {
+                    UpdateAttackSpeed();
+                }
                 break;
         }
     }
@@ -284,18 +352,89 @@ public class PlayerSkillSystem : MonoBehaviour
     {
         if (_weaponController == null) return;
         
-        // Default attack rate
-        float attackRateMultiplier = 1f;
-        
-        // If speed increase skill is active
+        // Get speed skill data
         AttackSpeedSkill speedSkill = GetSkill<AttackSpeedSkill>();
+        
         if (speedSkill != null && speedSkill.IsActive)
         {
-            attackRateMultiplier = speedSkill.GetSpeedMultiplier();
+            // Apply rage effect based on RageMode skill state
+            bool isRageActive = IsSkillActive(GameEnums.SkillType.RageMode);
+            speedSkill.ApplyRageEffect(isRageActive);
+            
+            // Use strategy pattern to apply attack speed
+            float speedMultiplier = speedSkill.GetSpeedMultiplier();
+            object[] parameters = new object[] { speedMultiplier };
+            
+            IProjectileStrategy attackSpeedStrategy = ProjectileStrategyFactory.CreateStrategy(
+                GameEnums.ProjectileStrategyType.AttackSpeed,
+                parameters
+            );
+            
+            _weaponController.SetProjectileStrategy(attackSpeedStrategy);
+            
+            Debug.Log($"[PlayerSkillSystem] Applied AttackSpeed strategy with multiplier: {speedMultiplier}");
         }
+        else
+        {
+            // If skill is not active, reset to standard attack rate
+            _weaponController.SetAttackRateMultiplier(1f);
+            
+            // Check if any other strategies are active
+            if (!IsSkillActive(GameEnums.SkillType.ArrowMultiplication) && 
+                !IsSkillActive(GameEnums.SkillType.BounceDamage) &&
+                !IsSkillActive(GameEnums.SkillType.BurnDamage))
+            {
+                // If no other strategies are active, set to standard strategy
+                _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Applies burn damage skill
+    /// </summary>
+    private void ApplyBurnDamage()
+    {
+        if (_weaponController == null) return;
         
-        // Apply attack rate to weapon controller
-        _weaponController.SetAttackRateMultiplier(attackRateMultiplier);
+        BurnDamageSkill burnSkill = GetSkill<BurnDamageSkill>();
+        if (burnSkill != null && burnSkill.IsActive)
+        {
+            // Apply rage effect based on RageMode skill state
+            bool isRageActive = IsSkillActive(GameEnums.SkillType.RageMode);
+            burnSkill.ApplyRageEffect(isRageActive);
+            
+            Debug.Log($"[PlayerSkillSystem] Configuring burning projectile strategy. Rage Active: {isRageActive}, Burn Duration: {burnSkill.GetBurnDuration()}");
+            
+            // Use strategy pattern to apply burn damage
+            object[] parameters = new object[] { 
+                burnSkill.GetBurnDamagePerSecond(),
+                burnSkill.GetBurnDuration(),
+                burnSkill.GetMaxStacks() 
+            };
+            
+            IProjectileStrategy burningStrategy = ProjectileStrategyFactory.CreateStrategy(
+                GameEnums.ProjectileStrategyType.Burning,
+                parameters
+            );
+            
+            _weaponController.SetProjectileStrategy(burningStrategy);
+            
+            Debug.Log($"[PlayerSkillSystem] Applied Burning strategy with damage: {burnSkill.GetBurnDamagePerSecond()}, duration: {burnSkill.GetBurnDuration()}");
+        }
+        else
+        {
+            // Check if any other strategies are active
+            if (!IsSkillActive(GameEnums.SkillType.ArrowMultiplication) && 
+                !IsSkillActive(GameEnums.SkillType.BounceDamage) &&
+                !IsSkillActive(GameEnums.SkillType.AttackSpeedIncrease))
+            {
+                // If no other strategies are active, set to standard strategy
+                _weaponController.SetProjectileStrategy(new StandardProjectileStrategy());
+            }
+            
+            Debug.Log("[PlayerSkillSystem] Burning projectile strategy disabled");
+        }
     }
     
     /// <summary>
@@ -318,7 +457,7 @@ public class PlayerSkillSystem : MonoBehaviour
                     break;
                     
                 case GameEnums.SkillType.BurnDamage:
-                    // Burn damage is applied in the Projectile class
+                    ApplyBurnDamage();
                     break;
                     
                 case GameEnums.SkillType.AttackSpeedIncrease:

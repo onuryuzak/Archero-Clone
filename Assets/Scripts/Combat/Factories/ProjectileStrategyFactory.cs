@@ -22,24 +22,14 @@ public class ProjectileStrategyFactory
                 return new BouncingProjectileStrategy(bounceCount, damageFalloff);
                 
             case GameEnums.ProjectileStrategyType.Burning:
-
-                Debug.LogWarning("Burning projectile strategy not implemented yet. Using standard instead.");
-                return new StandardProjectileStrategy();
+                float burnDamagePerSecond = parameters != null && parameters.Length > 0 ? (float)parameters[0] : 5f;
+                float burnDuration = parameters != null && parameters.Length > 1 ? (float)parameters[1] : 3f;
+                int maxStacks = parameters != null && parameters.Length > 2 ? (int)parameters[2] : 3;
+                return new BurningProjectileStrategy(burnDamagePerSecond, burnDuration, maxStacks);
                 
-            case GameEnums.ProjectileStrategyType.Piercing:
-
-                Debug.LogWarning("Piercing projectile strategy not implemented yet. Using standard instead.");
-                return new StandardProjectileStrategy();
-                
-            case GameEnums.ProjectileStrategyType.Homing:
-
-                Debug.LogWarning("Homing projectile strategy not implemented yet. Using standard instead.");
-                return new StandardProjectileStrategy();
-                
-            case GameEnums.ProjectileStrategyType.Explosive:
-
-                Debug.LogWarning("Explosive projectile strategy not implemented yet. Using standard instead.");
-                return new StandardProjectileStrategy();
+            case GameEnums.ProjectileStrategyType.AttackSpeed:
+                float speedMultiplier = parameters != null && parameters.Length > 0 ? (float)parameters[0] : 2f;
+                return new AttackSpeedProjectileStrategy(speedMultiplier);
                 
             default:
                 return new StandardProjectileStrategy();

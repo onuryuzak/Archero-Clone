@@ -17,6 +17,7 @@ public class Projectile : MonoBehaviour
     
     [Header("Visual Effects")]
     [SerializeField] private GameObject _hitEffectPrefab;
+    [SerializeField] private float _hitEffectLifetime = 2f; // How long hit effects last before being destroyed
     
     [Header("Advanced Physics")]
     [SerializeField] private bool _useAdvancedPhysics = true;
@@ -39,7 +40,6 @@ public class Projectile : MonoBehaviour
     
     // Properties
     public float Speed => _speed;
-    public float Damage => _damage;
     
     private void Awake()
     {
@@ -183,31 +183,45 @@ public class Projectile : MonoBehaviour
             // Apply damage
             damageable.TakeDamage(_damage);
             
-            // Check if we need to apply burn damage
-            Enemy enemy = hitObject.GetComponent<Enemy>();
-            if (enemy != null)
+            // Check if we have a BurningProjectile component
+            BurningProjectile burningProjectile = GetComponent<BurningProjectile>();
+            if (burningProjectile != null)
             {
-                // Find if there's an active skill system in the scene
-                PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
-                if (skillSystem != null && skillSystem.IsSkillActive(GameEnums.SkillType.BurnDamage))
+                // Apply burning effect directly from the component
+                burningProjectile.ApplyBurningEffect(hitObject);
+            }
+            else
+            {
+                // Traditional skill system check (legacy approach)
+                Enemy enemy = hitObject.GetComponent<Enemy>();
+                if (enemy != null)
                 {
-                    // Get burn skill data
-                    BurnDamageSkill burnSkill = skillSystem.GetSkill<BurnDamageSkill>();
-                    if (burnSkill != null)
+                    // Find if there's an active skill system in the scene
+                    PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
+                    if (skillSystem != null && skillSystem.IsSkillActive(GameEnums.SkillType.BurnDamage))
                     {
-                        // Add or get BurnEffect component
-                        BurnEffect burnEffect = enemy.GetComponent<BurnEffect>();
-                        
-                        // Configure max stacks
-                        burnEffect.SetMaxStacks(burnSkill.GetMaxStacks());
-                        
-                        // Apply burn stack with appropriate duration and damage
-                        burnEffect.AddBurnStack(
-                            burnSkill.GetBurnDuration(),
-                            burnSkill.GetBurnDamagePerSecond()
-                        );
-                        
-                        Debug.Log($"Applied burn effect to {enemy.name}: {burnSkill.GetBurnDamagePerSecond()} dps for {burnSkill.GetBurnDuration()} seconds");
+                        // Get burn skill data
+                        BurnDamageSkill burnSkill = skillSystem.GetSkill<BurnDamageSkill>();
+                        if (burnSkill != null)
+                        {
+                            // Add or get BurnEffect component
+                            BurnEffect burnEffect = enemy.GetComponent<BurnEffect>();
+                            if (burnEffect == null)
+                            {
+                                burnEffect = enemy.gameObject.AddComponent<BurnEffect>();
+                            }
+                            
+                            // Configure max stacks
+                            burnEffect.SetMaxStacks(burnSkill.GetMaxStacks());
+                            
+                            // Apply burn stack with appropriate duration and damage
+                            burnEffect.AddBurnStack(
+                                burnSkill.GetBurnDuration(),
+                                burnSkill.GetBurnDamagePerSecond()
+                            );
+                            
+                            Debug.Log($"Applied burn effect to {enemy.name}: {burnSkill.GetBurnDamagePerSecond()} dps for {burnSkill.GetBurnDuration()} seconds");
+                        }
                     }
                 }
             }
@@ -216,20 +230,15 @@ public class Projectile : MonoBehaviour
         // Instantiate hit effect if available
         if (_hitEffectPrefab != null)
         {
-            Instantiate(_hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+            GameObject effect = Instantiate(_hitEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+            Destroy(effect, _hitEffectLifetime);
         }
         
-        // Invoke the hit event
+        // Notify listeners about the hit
         OnHit?.Invoke(hitObject, hit.point);
         
-        // Eğer BouncingProjectile componenti yoksa, mermiyi yok et
-        BouncingProjectile bouncer = GetComponent<BouncingProjectile>();
-        if (bouncer == null)
-        {
-            // Mermiyi yok et - Bounce özelliği olmayan projeler ilk çarpışmada yok edilir
-            Destroy(gameObject, 0.05f); // Slight delay to ensure hit effects are shown
-        }
-        // BouncingProjectile componenti varsa, HandleHit metodu sekme işlemini yönetecek
+        // Destroy the projectile
+        Destroy(gameObject);
     }
     
     /// <summary>
@@ -260,20 +269,60 @@ public class Projectile : MonoBehaviour
             // Hasar uygula
             damageable.TakeDamage(_damage);
             
-            // Görsel efektler eklenebilir
-            
-            // OnHit olayını tetikle
-            OnHit?.Invoke(hitObject, hitPosition);
-            
-            // Eğer BouncingProjectile componenti yoksa, mermiyi yok et
-            BouncingProjectile bouncer = GetComponent<BouncingProjectile>();
-            if (bouncer == null)
+            // Check if we have a BurningProjectile component
+            BurningProjectile burningProjectile = GetComponent<BurningProjectile>();
+            if (burningProjectile != null)
             {
-                // Mermiyi yok et - Bounce özelliği olmayan projeler ilk çarpışmada yok edilir
-                Destroy(gameObject); // Slight delay to ensure hit effects are shown
+                // Apply burning effect directly from the component
+                burningProjectile.ApplyBurningEffect(hitObject);
             }
-            // BouncingProjectile componenti varsa, HandleHit metodu sekme işlemini yönetecek
+            else
+            {
+                // Burn efektini kontrol et ve uygula
+                Enemy enemy = hitObject.GetComponent<Enemy>();
+                if (enemy != null)
+                {
+                    // Find if there's an active skill system in the scene
+                    PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
+                    if (skillSystem != null && skillSystem.IsSkillActive(GameEnums.SkillType.BurnDamage))
+                    {
+                        // Get burn skill data
+                        BurnDamageSkill burnSkill = skillSystem.GetSkill<BurnDamageSkill>();
+                        if (burnSkill != null)
+                        {
+                            // Add or get BurnEffect component
+                            BurnEffect burnEffect = enemy.GetComponent<BurnEffect>();
+                            if (burnEffect == null)
+                            {
+                                burnEffect = enemy.gameObject.AddComponent<BurnEffect>();
+                            }
+                            
+                            // Configure max stacks
+                            burnEffect.SetMaxStacks(burnSkill.GetMaxStacks());
+                            
+                            // Apply burn stack with appropriate duration and damage
+                            burnEffect.AddBurnStack(
+                                burnSkill.GetBurnDuration(),
+                                burnSkill.GetBurnDamagePerSecond()
+                            );
+                        }
+                    }
+                }
+            }
+            
+            // Görsel efektler ekle
+            if (_hitEffectPrefab != null)
+            {
+                GameObject effect = Instantiate(_hitEffectPrefab, hitPosition, Quaternion.identity);
+                Destroy(effect, _hitEffectLifetime);
+            }
         }
+        
+        // Notify listeners about the hit
+        OnHit?.Invoke(hitObject, hitPosition);
+        
+        // Destroy the projectile
+        Destroy(gameObject);
     }
     
     // Events

@@ -52,7 +52,7 @@ MonoBehaviour:
   _collisionLayers:
     serializedVersion: 2
     m_Bits: 64
-  _hitEffectPrefab: {fileID: 0}
+  _hitEffectPrefab: {fileID: 100000, guid: f06e78284f831ae469c74624ab5d513b, type: 3}
   _useAdvancedPhysics: 1
   _initialAngle: 15
   _dragCoefficient: 0.01
