@@ -74,7 +74,7 @@ public class SkillButtonUI : MonoBehaviour
         if (skill is RageModeSkill rageSkill)
         {
             _rageSkill = rageSkill;
-            _rageSkill.OnRageModeStateChanged += OnRageModeStateChanged;
+            GameEvents.OnRageModeStateChanged += OnRageModeStateChanged;
             
             // Rage modu UI'ını göster/gizle
             if (_rageTimerContainer != null)
@@ -108,7 +108,7 @@ public class SkillButtonUI : MonoBehaviour
         // Rage skill olay aboneliklerini temizle
         if (_rageSkill != null)
         {
-            _rageSkill.OnRageModeStateChanged -= OnRageModeStateChanged;
+            GameEvents.OnRageModeStateChanged -= OnRageModeStateChanged;
         }
     }
     

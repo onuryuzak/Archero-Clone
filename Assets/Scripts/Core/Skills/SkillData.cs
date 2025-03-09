@@ -25,7 +25,7 @@ public abstract class SkillData : ScriptableObject
     // Rage mode effect state
     protected bool _isRageActive = false;
     
-    // Events called when skill is activated and deactivated
+    // Events called when skill is activated and deactivated (legacy approach - can still be used alongside GameEvents)
     public event Action<SkillData> OnSkillActivated;
     public event Action<SkillData> OnSkillDeactivated;
     
@@ -35,7 +35,13 @@ public abstract class SkillData : ScriptableObject
     public virtual void Activate()
     {
         isActive = true;
+        
+        // Trigger legacy event
         OnSkillActivated?.Invoke(this);
+        
+        // Trigger GameEvent
+        GameEvents.OnSkillActivated?.Invoke(this);
+        Debug.Log($"[SkillData] {_skillName} activated - OnSkillActivated event raised");
     }
     
     /// <summary>
@@ -44,7 +50,13 @@ public abstract class SkillData : ScriptableObject
     public virtual void Deactivate()
     {
         isActive = false;
+        
+        // Trigger legacy event
         OnSkillDeactivated?.Invoke(this);
+        
+        // Trigger GameEvent
+        GameEvents.OnSkillDeactivated?.Invoke(this);
+        Debug.Log($"[SkillData] {_skillName} deactivated - OnSkillDeactivated event raised");
     }
     
     /// <summary>

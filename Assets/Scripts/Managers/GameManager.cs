@@ -44,34 +44,10 @@ public class GameManager : InjectedMonoBehaviour
     
     protected override void InjectDependencies()
     {
-        // Register player data if available
-        if (_defaultPlayerData != null)
-        {
-            Register<PlayerData>(_defaultPlayerData);
-        }
-        else
-        {
-            // Try to load from resources
-            _defaultPlayerData = Resources.Load<PlayerData>(_playerDataResourcePath);
-            
-            if (_defaultPlayerData != null)
-            {
-                Register<PlayerData>(_defaultPlayerData);
-            }
-            else
-            {
-                Debug.LogError($"[{GetType().Name}] Could not load PlayerData from resources path: {_playerDataResourcePath}");
-            }
-        }
-        
-        // Register self as a service
-        Register<GameManager>(this);
-        
-        // Set dependencies injected flag
-        DependenciesInjected = true;
+        base.InjectDependencies();
     }
     
-    protected override void Awake()
+    private void Awake()
     {
         // Singleton pattern implementation
         if (_instance != null && _instance != this)
@@ -132,25 +108,6 @@ public class GameManager : InjectedMonoBehaviour
         else
             Debug.LogError("EnemyManager reference is missing!");
     }
-
-    public void PauseGame()
-    {
-        IsGameActive = false;
-        Time.timeScale = 0f;
-    }
-
-    public void ResumeGame()
-    {
-        IsGameActive = true;
-        Time.timeScale = 1f;
-    }
-
-    public void EndGame()
-    {
-        IsGameActive = false;
-        Debug.Log("Game Over");
-        // Implement game over logic
-    }
     
     /// <summary>
     /// Gets the current player data
@@ -184,31 +141,13 @@ public class GameManager : InjectedMonoBehaviour
     }
     
     /// <summary>
-    /// Gets the player controller
+    /// Called when the game is exiting or scene is changing
+    /// Cleans up all event registrations
     /// </summary>
-    public PlayerController GetPlayerController()
+    private void OnDestroy()
     {
-        // Return the cached reference if available
-        if (_playerController != null)
-        {
-            return _playerController;
-        }
-        
-        // Try to resolve from container
-        _playerController = Resolve<PlayerController>();
-        
-        // If still null, find in scene
-        if (_playerController == null)
-        {
-            _playerController = FindObjectOfType<PlayerController>();
-            
-            // Register for future reference if found
-            if (_playerController != null)
-            {
-                Register<PlayerController>(_playerController);
-            }
-        }
-        
-        return _playerController;
+        // Reset all events when game manager is destroyed
+        // This prevents memory leaks and ghost callbacks
+        GameEvents.ResetAllEvents();
     }
 } 

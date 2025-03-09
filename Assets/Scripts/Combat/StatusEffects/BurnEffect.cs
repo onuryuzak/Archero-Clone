@@ -28,18 +28,18 @@ public class BurnEffect : MonoBehaviour
             BurnStack stack = _activeStacks[i];
             
             // Decrease remaining duration
-            stack.remainingDuration -= Time.deltaTime;
+            stack.RemainingDuration -= Time.deltaTime;
             
             // Check if it's time to apply damage
-            stack.timeSinceLastTick += Time.deltaTime;
-            if (stack.timeSinceLastTick >= 1f) // Apply damage every second
+            stack.TimeSinceLastTick += Time.deltaTime;
+            if (stack.TimeSinceLastTick >= 1f) // Apply damage every second
             {
-                ApplyBurnDamage(stack.damagePerSecond);
-                stack.timeSinceLastTick = 0f;
+                ApplyBurnDamage(stack.DamagePerSecond);
+                stack.TimeSinceLastTick = 0f;
             }
             
             // Remove stack if duration has ended
-            if (stack.remainingDuration <= 0f)
+            if (stack.RemainingDuration <= 0f)
             {
                 _activeStacks.RemoveAt(i);
             }
@@ -67,9 +67,9 @@ public class BurnEffect : MonoBehaviour
             
             for (int i = 0; i < _activeStacks.Count; i++)
             {
-                if (_activeStacks[i].remainingDuration < shortestTime)
+                if (_activeStacks[i].RemainingDuration < shortestTime)
                 {
-                    shortestTime = _activeStacks[i].remainingDuration;
+                    shortestTime = _activeStacks[i].RemainingDuration;
                     shortestIndex = i;
                 }
             }
@@ -77,115 +77,47 @@ public class BurnEffect : MonoBehaviour
             // Replace the shortest duration stack with the new one
             _activeStacks[shortestIndex] = new BurnStack
             {
-                remainingDuration = duration,
-                damagePerSecond = damagePerSecond,
-                timeSinceLastTick = 0f
+                RemainingDuration = duration,
+                DamagePerSecond = damagePerSecond,
+                TimeSinceLastTick = 0f
             };
             
-            Debug.Log($"[BurnEffect] Updated existing burn stack on {_targetEnemy.name}: {damagePerSecond} dps for {duration} seconds");
+            Debug.Log($"[BurnEffect] Updated existing burn stack on {(_targetEnemy != null ? _targetEnemy.name : "Unknown Enemy")}: {damagePerSecond} dps for {duration} seconds");
         }
         else
         {
             // Add new stack
             _activeStacks.Add(new BurnStack
             {
-                remainingDuration = duration,
-                damagePerSecond = damagePerSecond,
-                timeSinceLastTick = 0f
+                RemainingDuration = duration,
+                DamagePerSecond = damagePerSecond,
+                TimeSinceLastTick = 0f
             });
             
-            Debug.Log($"[BurnEffect] Added new burn stack to {_targetEnemy.name}: {damagePerSecond} dps for {duration} seconds. Total stacks: {_activeStacks.Count}/{_maxStacks}");
+            Debug.Log($"[BurnEffect] Added new burn stack to {(_targetEnemy != null ? _targetEnemy.name : "Unknown Enemy")}: {damagePerSecond} dps for {duration} seconds. Total stacks: {_activeStacks.Count}/{_maxStacks}");
         }
         
         // Create VFX if it doesn't exist
-        if (_activeVfx == null && _burnVfxPrefab != null)
+        if (_activeVfx == null)
         {
-            _activeVfx = Instantiate(_burnVfxPrefab, transform);
-        }
-        // If no VFX prefab is assigned, create a simple effect
-        else if (_activeVfx == null)
-        {
-            CreateSimpleBurnEffect();
+            if (_burnVfxPrefab != null)
+            {
+                try
+                {
+                    // Instantiate with error handling
+                    _activeVfx = Instantiate(_burnVfxPrefab, transform);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[BurnEffect] Error instantiating burn VFX prefab: {e.Message}");
+                }
+            }
         }
     }
     
     /// <summary>
     /// Creates a simple burn effect when no VFX prefab is available
     /// </summary>
-    private void CreateSimpleBurnEffect()
-    {
-        // Create a simple particle system for the burn effect
-        _activeVfx = new GameObject("BurnEffect");
-        _activeVfx.transform.SetParent(transform);
-        _activeVfx.transform.localPosition = Vector3.up * 0.5f; // Position slightly above
-        
-        // Add a particle system
-        ParticleSystem ps = _activeVfx.AddComponent<ParticleSystem>();
-        
-        // Configure the particle system for a fire effect
-        var main = ps.main;
-        main.startLifetime = 0.6f;
-        main.startSpeed = 1f;
-        main.startSize = 0.3f;
-        main.startColor = new Color(1f, 0.5f, 0f, 0.8f); // Orange-ish color
-        main.simulationSpace = ParticleSystemSimulationSpace.World;
-        
-        var emission = ps.emission;
-        emission.rateOverTime = 15f;
-        
-        var shape = ps.shape;
-        shape.shapeType = ParticleSystemShapeType.Sphere;
-        shape.radius = 0.5f;
-        
-        var colorOverLifetime = ps.colorOverLifetime;
-        colorOverLifetime.enabled = true;
-        Gradient gradient = new Gradient();
-        gradient.SetKeys(
-            new GradientColorKey[] { 
-                new GradientColorKey(new Color(1f, 0.5f, 0f), 0.0f),
-                new GradientColorKey(new Color(1f, 0f, 0f), 1.0f) 
-            },
-            new GradientAlphaKey[] { 
-                new GradientAlphaKey(0.8f, 0.0f),
-                new GradientAlphaKey(0f, 1.0f) 
-            }
-        );
-        colorOverLifetime.color = gradient;
-        
-        var sizeOverLifetime = ps.sizeOverLifetime;
-        sizeOverLifetime.enabled = true;
-        AnimationCurve curve = new AnimationCurve();
-        curve.AddKey(0.0f, 0.5f);
-        curve.AddKey(1.0f, 0.0f);
-        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, curve);
-        
-        // Add a light component for extra effect
-        Light light = _activeVfx.AddComponent<Light>();
-        light.color = new Color(1f, 0.6f, 0f);
-        light.intensity = 1.5f;
-        light.range = 3f;
-        light.type = LightType.Point;
-        
-        // Make the light flicker
-        StartCoroutine(FlickerLight(light));
-    }
-    
-    /// <summary>
-    /// Coroutine to make the light flicker
-    /// </summary>
-    private IEnumerator FlickerLight(Light light)
-    {
-        float baseIntensity = light.intensity;
-        
-        while (light != null && _activeStacks.Count > 0)
-        {
-            // Random flicker
-            float noise = Random.Range(0.8f, 1.2f);
-            light.intensity = baseIntensity * noise;
-            
-            yield return new WaitForSeconds(0.05f);
-        }
-    }
     
     /// <summary>
     /// Applies burn damage
@@ -211,9 +143,9 @@ public class BurnEffect : MonoBehaviour
     /// </summary>
     private class BurnStack
     {
-        public float remainingDuration;
-        public float damagePerSecond;
-        public float timeSinceLastTick;
+        public float RemainingDuration;
+        public float DamagePerSecond;
+        public float TimeSinceLastTick;
     }
     
     private void OnDestroy()

@@ -9,14 +9,11 @@ public class RageModeSkill : SkillData
 {
     // State flag
     private bool _isRageModeActive = false;
-    
-    // Event triggered when rage mode state changes
-    public event Action<bool> OnRageModeStateChanged;
-    
+
     // Property to check if rage mode is currently active
     public bool IsRageModeActive => _isRageModeActive;
 
-    
+
     /// <summary>
     /// Activates the skill
     /// </summary>
@@ -25,7 +22,7 @@ public class RageModeSkill : SkillData
         base.Activate();
         ActivateRageMode();
     }
-    
+
     /// <summary>
     /// Deactivates the skill
     /// </summary>
@@ -34,25 +31,25 @@ public class RageModeSkill : SkillData
         base.Deactivate();
         DeactivateRageMode();
     }
-    
+
     /// <summary>
     /// Activates rage mode
     /// </summary>
     private void ActivateRageMode()
     {
         _isRageModeActive = true;
-        OnRageModeStateChanged?.Invoke(true);
+        GameEvents.OnRageModeStateChanged?.Invoke(true);
     }
-    
+
     /// <summary>
     /// Deactivates rage mode
     /// </summary>
     private void DeactivateRageMode()
     {
         _isRageModeActive = false;
-        OnRageModeStateChanged?.Invoke(false);
+        GameEvents.OnRageModeStateChanged?.Invoke(false);
     }
-    
+
     /// <summary>
     /// Applies rage mode effect to this skill
     /// Base implementation does nothing specific
@@ -61,7 +58,7 @@ public class RageModeSkill : SkillData
     {
         base.ApplyRageEffect(rageActive);
     }
-    
+
     /// <summary>
     /// Gets the base value of the skill effect
     /// </summary>
@@ -70,4 +67,4 @@ public class RageModeSkill : SkillData
     {
         return 1f;
     }
-} 
+}

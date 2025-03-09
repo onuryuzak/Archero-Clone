@@ -41,7 +41,7 @@ public class EnemyManager : MonoBehaviour
         if (enemy != null)
         {
             enemy.Initialize();
-            enemy.OnEnemyDefeated += HandleEnemyDefeated;
+            GameEvents.OnEnemyDefeated += HandleEnemyDefeated;
             _activeEnemies.Add(enemy);
         }
         else
@@ -73,7 +73,7 @@ public class EnemyManager : MonoBehaviour
     private void HandleEnemyDefeated(Enemy enemy)
     {
         // Remove event subscription
-        enemy.OnEnemyDefeated -= HandleEnemyDefeated;
+        GameEvents.OnEnemyDefeated -= HandleEnemyDefeated;
         
         // Remove from active list
         _activeEnemies.Remove(enemy);

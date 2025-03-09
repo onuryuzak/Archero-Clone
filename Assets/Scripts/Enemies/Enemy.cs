@@ -11,9 +11,6 @@ public class Enemy : MonoBehaviour, IDamageable
     private float _currentHealth;
     private HealthBar _healthBar;
     
-    // Event for when enemy is defeated
-    public event Action<Enemy> OnEnemyDefeated;
-    
     public void Initialize()
     {
         _currentHealth = _maxHealth;
@@ -31,9 +28,10 @@ public class Enemy : MonoBehaviour, IDamageable
                 _healthBar.Initialize(_maxHealth, transform);
             }
         }
+        
+        // Trigger enemy spawned event
+        GameEvents.OnEnemySpawned?.Invoke(this);
     }
-    
-   
     
     public void TakeDamage(float damage)
     {
@@ -55,8 +53,10 @@ public class Enemy : MonoBehaviour, IDamageable
     
     private void Die()
     {
-        // Trigger event
-        OnEnemyDefeated?.Invoke(this);
+        
+        // Trigger GameEvent
+        GameEvents.OnEnemyDefeated?.Invoke(this);
+        Debug.Log($"[Enemy] {gameObject.name} defeated - OnEnemyDefeated event raised");
         
         // Play death animation or particle effect here
         
