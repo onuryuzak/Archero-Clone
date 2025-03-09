@@ -25,7 +25,7 @@ public class DependencyContainer : MonoBehaviour
             if (_instance == null)
             {
                 // Try to find existing instance
-                _instance = FindObjectOfType<DependencyContainer>();
+                _instance = FindFirstObjectByType<DependencyContainer>();
                 
                 // If no instance exists, create one
                 if (_instance == null)
@@ -94,7 +94,7 @@ public class DependencyContainer : MonoBehaviour
         }
         
         // Find player controller in scene
-        PlayerController playerController = FindObjectOfType<PlayerController>();
+        PlayerController playerController = FindFirstObjectByType<PlayerController>();
         if (playerController != null)
         {
             Register(playerController);

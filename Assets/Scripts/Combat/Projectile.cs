@@ -168,6 +168,12 @@ public class Projectile : MonoBehaviour
         _isPaused = false;
     }
     
+    // Events
+    public event Action<GameObject, Vector3> OnHit;
+    
+    // New property to control destruction after collision
+    public bool DestroyOnCollision { get; set; } = true;
+
     /// <summary>
     /// Handles collision events
     /// </summary>
@@ -197,7 +203,7 @@ public class Projectile : MonoBehaviour
                 if (enemy != null)
                 {
                     // Find if there's an active skill system in the scene
-                    PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
+                    PlayerSkillSystem skillSystem = FindFirstObjectByType<PlayerSkillSystem>();
                     if (skillSystem != null && skillSystem.IsSkillActive(GameEnums.SkillType.BurnDamage))
                     {
                         // Get burn skill data
@@ -237,8 +243,11 @@ public class Projectile : MonoBehaviour
         // Notify listeners about the hit
         OnHit?.Invoke(hitObject, hit.point);
         
-        // Destroy the projectile
-        Destroy(gameObject);
+        // Only destroy if DestroyOnCollision is true
+        if (DestroyOnCollision)
+        {
+            Destroy(gameObject);
+        }
     }
     
     /// <summary>
@@ -283,7 +292,7 @@ public class Projectile : MonoBehaviour
                 if (enemy != null)
                 {
                     // Find if there's an active skill system in the scene
-                    PlayerSkillSystem skillSystem = FindObjectOfType<PlayerSkillSystem>();
+                    PlayerSkillSystem skillSystem = FindFirstObjectByType<PlayerSkillSystem>();
                     if (skillSystem != null && skillSystem.IsSkillActive(GameEnums.SkillType.BurnDamage))
                     {
                         // Get burn skill data
@@ -321,13 +330,13 @@ public class Projectile : MonoBehaviour
         // Notify listeners about the hit
         OnHit?.Invoke(hitObject, hitPosition);
         
-        // Destroy the projectile
-        Destroy(gameObject);
+        // Only destroy if DestroyOnCollision is true
+        if (DestroyOnCollision)
+        {
+            Destroy(gameObject);
+        }
     }
     
-    // Events
-    public event Action<GameObject, Vector3> OnHit;
-
     /// <summary>
     /// Gravityi açıp kapatmak için public method
     /// </summary>

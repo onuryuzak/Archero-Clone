@@ -4,87 +4,101 @@ using UnityEngine;
 
 public class EnemyManager : MonoBehaviour
 {
-    [Header("Enemy Settings")]
-    [SerializeField] private GameObject _enemyPrefab;
+    [Header("Enemy Settings")] [SerializeField]
+    private GameObject _enemyPrefab;
+
     [SerializeField] private int _minEnemyCount = 5;
+    [SerializeField] private int _maxEnemyCount = 5; // Maksimum düşman sayısı
     [SerializeField] private float _spawnDelay = 1.0f;
-    
-    [Header("Spawn Area")]
-    [SerializeField] private float _spawnAreaWidth = 8f;
+
+    [Header("Spawn Area")] [SerializeField]
+    private float _spawnAreaWidth = 8f;
+
     [SerializeField] private float _spawnAreaHeight = 12f;
-    
+
     private List<Enemy> _activeEnemies = new List<Enemy>();
     private Transform _playerTransform;
-    
+
+    private void OnEnable()
+    {
+        // Event aboneliğini bir kez yapalım
+        GameEvents.OnEnemyDefeated += HandleEnemyDefeated;
+    }
+
+    private void OnDisable()
+    {
+        // Event aboneliğini temizleyelim
+        GameEvents.OnEnemyDefeated -= HandleEnemyDefeated;
+    }
+
     private void Start()
     {
         // Find player reference
-        _playerTransform = FindObjectOfType<PlayerController>()?.transform;
+        _playerTransform = FindFirstObjectByType<PlayerController>()?.transform;
         if (_playerTransform == null)
             Debug.LogError("PlayerController not found in the scene!");
     }
-    
+
     public void SpawnInitialEnemies()
     {
-        for (int i = 0; i < _minEnemyCount; i++)
+        // Başlangıçta düşman sayımız _minEnemyCount kadar olsun ve maksimum sayıyı geçmesin
+        int spawnCount = Mathf.Min(_minEnemyCount, _maxEnemyCount);
+        for (int i = 0; i < spawnCount; i++)
         {
             SpawnEnemy();
         }
     }
-    
+
     public void SpawnEnemy()
     {
+        // Maksimum düşman sayısını kontrol et
+        if (_activeEnemies.Count >= _maxEnemyCount)
+        {
+            Debug.Log($"[EnemyManager] Maximum enemy count ({_maxEnemyCount}) reached. Not spawning more enemies.");
+            return;
+        }
+
         Vector3 spawnPosition = GetRandomSpawnPosition();
         GameObject enemyObject = Instantiate(_enemyPrefab, spawnPosition, Quaternion.identity);
         Enemy enemy = enemyObject.GetComponent<Enemy>();
-        
+
         if (enemy != null)
         {
             enemy.Initialize();
-            GameEvents.OnEnemyDefeated += HandleEnemyDefeated;
             _activeEnemies.Add(enemy);
+            Debug.Log($"[EnemyManager] Enemy spawned. Active enemy count: {_activeEnemies.Count}/{_maxEnemyCount}");
         }
         else
         {
             Debug.LogError("Enemy component not found on enemy prefab!");
         }
     }
-    
+
     private Vector3 GetRandomSpawnPosition()
     {
-        // Try to find a spawn position that's not too close to the player
-        for (int attempts = 0; attempts < 10; attempts++)
-        {
-            float x = Random.Range(-_spawnAreaWidth / 2, _spawnAreaWidth / 2);
-            float z = Random.Range(-_spawnAreaHeight / 2, _spawnAreaHeight / 2);
-            Vector3 position = new Vector3(x, 1, z);
-                return position;
-            
-        }
-        
-        // If we can't find a good position after several attempts, just use a random one
         return new Vector3(
             Random.Range(-_spawnAreaWidth / 2, _spawnAreaWidth / 2),
-            0,
+            1,
             Random.Range(-_spawnAreaHeight / 2, _spawnAreaHeight / 2)
         );
     }
-    
+
     private void HandleEnemyDefeated(Enemy enemy)
     {
-        // Remove event subscription
-        GameEvents.OnEnemyDefeated -= HandleEnemyDefeated;
-        
-        // Remove from active list
-        _activeEnemies.Remove(enemy);
-        
-        // Spawn a new enemy after delay
-        StartCoroutine(SpawnEnemyWithDelay());
+        // Aktif düşman listesinden çıkar
+        if (_activeEnemies.Contains(enemy))
+        {
+            _activeEnemies.Remove(enemy);
+            Debug.Log($"[EnemyManager] Enemy defeated. Active enemy count: {_activeEnemies.Count}/{_maxEnemyCount}");
+
+            // Yeni düşman oluştur (gecikme ile)
+            StartCoroutine(SpawnEnemyWithDelay());
+        }
     }
-    
+
     private IEnumerator SpawnEnemyWithDelay()
     {
         yield return new WaitForSeconds(_spawnDelay);
         SpawnEnemy();
     }
-} 
+}

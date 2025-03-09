@@ -6,8 +6,6 @@ public class GameManager : InjectedMonoBehaviour
 {
     [Header("Resources")]
     [SerializeField] private PlayerData _defaultPlayerData;
-    [Tooltip("Path to the PlayerData in Resources folder")]
-    [SerializeField] private string _playerDataResourcePath = "GameData/DefaultPlayerData";
     
     // Game state
     public bool IsGameActive { get; private set; } = false;
@@ -30,7 +28,7 @@ public class GameManager : InjectedMonoBehaviour
         {
             if (_instance == null)
             {
-                _instance = FindObjectOfType<GameManager>();
+                _instance = FindFirstObjectByType<GameManager>();
                 
                 if (_instance == null)
                 {
@@ -46,8 +44,8 @@ public class GameManager : InjectedMonoBehaviour
     {
         base.InjectDependencies();
     }
-    
-    private void Awake()
+
+    protected override void Awake()
     {
         // Singleton pattern implementation
         if (_instance != null && _instance != this)
@@ -74,7 +72,7 @@ public class GameManager : InjectedMonoBehaviour
             // If not available in container, try to find in scene
             if (_enemyManager == null)
             {
-                _enemyManager = FindObjectOfType<EnemyManager>();
+                _enemyManager = FindFirstObjectByType<EnemyManager>();
                 
                 // Register if found
                 if (_enemyManager != null)

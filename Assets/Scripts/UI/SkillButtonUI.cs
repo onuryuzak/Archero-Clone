@@ -17,11 +17,7 @@ public class SkillButtonUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _skillNameText;
     [SerializeField] private TextMeshProUGUI _descriptionText;
     [SerializeField] private TextMeshProUGUI _statusText;
-    
-    [Header("Animation")]
-    [SerializeField] private float _pulseSpeed = 1.5f;
-    [SerializeField] private float _minPulseScale = 0.95f;
-    [SerializeField] private float _maxPulseScale = 1.05f;
+
 
     // Rage skill için UI öğeleri
     [Header("Rage Mode UI")]

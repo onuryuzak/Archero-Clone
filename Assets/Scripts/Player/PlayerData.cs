@@ -13,8 +13,6 @@ public class PlayerData : ScriptableObject
     [Header("Movement Settings")]
     [SerializeField] private float _moveSpeed = 5f;
     [SerializeField] private float _rotationSpeed = 10f;
-    [Tooltip("Maximum rotation angle per second")]
-    [SerializeField] private float _maxRotationAngle = 360f;
     
     [Header("Combat Settings")]
     [SerializeField] private float _baseAttackRate = 1.0f; // Attacks per second

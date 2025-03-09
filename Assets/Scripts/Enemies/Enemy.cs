@@ -10,10 +10,13 @@ public class Enemy : MonoBehaviour, IDamageable
     
     private float _currentHealth;
     private HealthBar _healthBar;
+    private bool _isDead = false; // Ölüm durumunu takip etmek için
     
     public void Initialize()
     {
         _currentHealth = _maxHealth;
+        _isDead = false;
+        
         // If a health bar reference is provided, initialize it
         if (_healthBar != null)
         {
@@ -35,6 +38,9 @@ public class Enemy : MonoBehaviour, IDamageable
     
     public void TakeDamage(float damage)
     {
+        // Ölmüşse hasar almaya devam etmesin
+        if (_isDead) return;
+        
         _currentHealth -= damage;
         _currentHealth = Mathf.Max(0, _currentHealth);
         
@@ -45,7 +51,7 @@ public class Enemy : MonoBehaviour, IDamageable
         }
         
         // Check if dead
-        if (_currentHealth <= 0)
+        if (_currentHealth <= 0 && !_isDead)
         {
             Die();
         }
@@ -53,6 +59,9 @@ public class Enemy : MonoBehaviour, IDamageable
     
     private void Die()
     {
+        // Birden fazla kez ölme olayının tetiklenmesini önle
+        if (_isDead) return;
+        _isDead = true;
         
         // Trigger GameEvent
         GameEvents.OnEnemyDefeated?.Invoke(this);
@@ -60,7 +69,7 @@ public class Enemy : MonoBehaviour, IDamageable
         
         // Play death animation or particle effect here
         
-        // Destroy game object
-        Destroy(gameObject);
+        // Destroy game object after a small delay to allow event processing
+        Destroy(gameObject, 0.1f);
     }
 } 

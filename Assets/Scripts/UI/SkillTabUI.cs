@@ -20,8 +20,6 @@ public class SkillTabUI : MonoBehaviour
     [Header("Visual Settings")] [SerializeField]
     private Color _activeSkillOutlineColor = new Color(0.2f, 0.8f, 0.2f);
 
-    [SerializeField] private float _buttonSpacing = 10f;
-
     // References
     private Dictionary<GameEnums.SkillType, SkillButtonUI> _skillButtons =
         new Dictionary<GameEnums.SkillType, SkillButtonUI>();
@@ -49,7 +47,7 @@ public class SkillTabUI : MonoBehaviour
     private void Start()
     {
         // Find the player skill system
-        _skillSystem = FindObjectOfType<PlayerSkillSystem>();
+        _skillSystem = FindFirstObjectByType<PlayerSkillSystem>();
 
         if (_skillSystem == null)
         {

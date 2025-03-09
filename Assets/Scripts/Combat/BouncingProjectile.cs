@@ -24,9 +24,6 @@ public class BouncingProjectile : MonoBehaviour
     // Target tracking
     private List<GameObject> _hitTargets = new List<GameObject>();
     
-    // Debug
-    [SerializeField] private bool _showDebugLogs = true;
-    
     private void Awake()
     {
         _projectile = GetComponent<Projectile>();
@@ -35,6 +32,10 @@ public class BouncingProjectile : MonoBehaviour
         {
             // Subscribe to the projectile's OnHit event
             _projectile.OnHit += OnProjectileHit;
+            
+            // Prevent projectile from destroying itself on collision 
+            // to allow bouncing between targets
+            _projectile.DestroyOnCollision = false;
         }
         
         // Set default target layers if not set
@@ -62,7 +63,10 @@ public class BouncingProjectile : MonoBehaviour
         _originalDamage = baseDamage;
         _currentDamage = baseDamage;
         
-        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Initialized with {_remainingBounces} bounces, damage:{_currentDamage}");
+        // Clear hit targets when initializing
+        _hitTargets.Clear();
+        
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Initialized with {_remainingBounces} bounces, damage:{_currentDamage}, falloff:{_damageFalloffPercentage}");
     }
     
 
@@ -74,12 +78,25 @@ public class BouncingProjectile : MonoBehaviour
     {
         if (hitObject == null) return;
         
-        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Hit object: {hitObject.name}");
+        Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Hit object: {hitObject.name}, Remaining bounces: {_remainingBounces}");
         
-        // If we're not already tracking this target, handle the hit
-        if (!_hitTargets.Contains(hitObject))
+        // Handle the hit if this is a valid target (on correct layer)
+        if (((1 << hitObject.layer) & _targetLayers) != 0)
         {
-            HitTarget(hitObject, hitPosition);
+            // If we're not already tracking this target, handle the hit
+            if (!_hitTargets.Contains(hitObject))
+            {
+                HitTarget(hitObject, hitPosition);
+            }
+            else
+            {
+                Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Already hit {hitObject.name}, ignoring");
+            }
+        }
+        else
+        {
+            // If we hit something that's not a valid target, just continue
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] Hit non-target object on layer {LayerMask.LayerToName(hitObject.layer)}");
         }
     }
     
@@ -119,9 +136,12 @@ public class BouncingProjectile : MonoBehaviour
         }
         else
         {
-            // No more bounces, destroy the projectile
-            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No more bounces, destroying");
-            Destroy(gameObject, 0.05f);
+            // No more bounces, allow the projectile to be destroyed on next collision
+            if (_projectile != null)
+            {
+                Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No more bounces, setting DestroyOnCollision=true");
+                _projectile.DestroyOnCollision = true;
+            }
         }
     }
     
@@ -168,7 +188,7 @@ public class BouncingProjectile : MonoBehaviour
             StartCoroutine(TemporarilyIgnoreCollisions(0.2f));
             
             // Offset the position slightly to avoid getting stuck
-            Vector3 offsetPosition = currentPosition + (direction * 0.1f);
+            Vector3 offsetPosition = currentPosition + (direction * 0.5f);
             
             // Move the projectile to the offset position
             transform.position = offsetPosition;
@@ -185,9 +205,12 @@ public class BouncingProjectile : MonoBehaviour
         }
         else
         {
-            // No valid targets, destroy the projectile
-            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No valid targets, destroying");
-            Destroy(gameObject, 0.05f);
+            // No valid targets, let the projectile continue on its current path
+            Debug.Log($"[BouncingProjectile] [ID:{GetInstanceID()}] No valid targets, continuing on current path");
+            if (_projectile != null)
+            {
+                _projectile.ResumeMovement();
+            }
         }
     }
     

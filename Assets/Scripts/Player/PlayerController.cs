@@ -109,7 +109,7 @@ public class PlayerController : InjectedMonoBehaviour
             // Eğer hala null ise, son çare olarak sahneyi ara
             if (_joystick == null)
             {
-                _joystick = FindObjectOfType<Joystick>();
+                _joystick = FindFirstObjectByType<Joystick>();
                 
                 // Bulunduysa container'a kaydet
                 if (_joystick != null)

@@ -114,7 +114,7 @@ public class WeaponController : InjectedMonoBehaviour
                 if (playerController == null)
                 {
                     // Last resort: try to find it in the scene
-                    playerController = FindObjectOfType<PlayerController>();
+                    playerController = FindFirstObjectByType<PlayerController>();
                     
                     // If found, register it for future use
                     if (playerController != null)
